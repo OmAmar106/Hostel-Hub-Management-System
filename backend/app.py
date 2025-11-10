@@ -9,6 +9,7 @@ from issues import issues_bp
 from notice import notices_bp
 from dotenv import load_dotenv
 import os
+from workers import workers_bp
 
 load_dotenv()
 
@@ -28,6 +29,7 @@ Migrate(app, db)
 JWTManager(app)
 
 app.register_blueprint(auth_bp)
+app.register_blueprint(workers_bp)
 app.register_blueprint(issues_bp)
 app.register_blueprint(notices_bp)
 

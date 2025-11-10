@@ -8,8 +8,14 @@ class User(db.Model):
     full_name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(20), nullable=False, default="student")  # student | admin
+    role = db.Column(db.String(20), nullable=False, default="student")
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+class WorkerInfo(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True, nullable=False)
+    worker_type = db.Column(db.String(100), nullable=False)
+    user = db.relationship("User", backref=db.backref("worker_info", uselist=False))
 
 class Issue(db.Model):
     id = db.Column(db.Integer, primary_key=True)

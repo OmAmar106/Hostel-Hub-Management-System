@@ -26,26 +26,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.getItem("access_token")
   );
 
-  // 🔥 Restore user on refresh
   useEffect(() => {
-    const savedUser = sessionStorage.getItem("user");
+    const savedUser = localStorage.getItem("user");
+    const savedToken = localStorage.getItem("access_token");
+
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      const parsed = JSON.parse(savedUser);
+      setUser(parsed);
+    }
+
+    if (savedToken) {
+      setToken(savedToken);
+      fetchProfile(savedToken);
     }
   }, []);
 
-  // 🔥 Fetch profile when token changes
-  useEffect(() => {
-    if (token) fetchProfile();
-  }, [token]);
-
-  const fetchProfile = async () => {
+  const fetchProfile = async (tokenToUse?: string) => {
+    const token = tokenToUse || localStorage.getItem("access_token");
     try {
       const res = await fetch(`${API_BASE}/auth/me`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("Failed to load profile");
       const data = await res.json();
+      if (!res.ok) throw new Error("Profile failed");
+
       const profile: User = {
         id: data.id,
         name: data.name,
@@ -54,12 +58,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         roomNo: data.roomNo || "",
       };
       setUser(profile);
-      sessionStorage.setItem("user", JSON.stringify(profile)); // persist user
+      localStorage.setItem("user", JSON.stringify(profile));
     } catch (err) {
-      console.error("Profile error:", err);
-      logout();
     }
   };
+
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
@@ -74,8 +77,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem("access_token", data.access);
       setToken(data.access);
 
-      // Ensure profile is loaded before proceeding
       await fetchProfile();
+
       return true;
     } catch (err) {
       console.error("Login failed:", err);
@@ -104,7 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     localStorage.removeItem("access_token");
-    sessionStorage.removeItem("user");
+    localStorage.removeItem("user");
     setUser(null);
     setToken(null);
   };
