@@ -53,20 +53,8 @@ class Notice(db.Model):
 
     def __repr__(self):
         return f'<Notice {self.id}: {self.title}>'
-# ----------------------
-# 3. Define a simple test route
-@app.route("/")
-def hello_world():
-    return "Hello from the Hostel Harmony Backend!"
-@app.route("/health")
-def simple():
-    return "This is a health check"
-@app.route("/api/health")
-def health_check():
-    # We return a JSON response
-    return jsonify({"status": "ok", "message": "Backend is healthy!"})
 
-# GET all issues
+
 @app.route("/api/issues", methods=['GET'])
 def get_issues():
     # 1. Query the database to get all issues
