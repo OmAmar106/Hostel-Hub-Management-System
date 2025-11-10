@@ -1,56 +1,78 @@
-from flask import Flask, jsonify,request
-from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy
-from model import *
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
+from model import db, Issue
 
-def issues(app):
-    @app.route("/api/issues", methods=['GET'])
-    def get_issues():
-        issues = Issue.query.all()
-        results = [
+issues_bp = Blueprint("issues", __name__, url_prefix="/api")
+
+def role_required(*roles):
+    def wrapper(fn):
+        def inner(*args, **kwargs):
+            claims = get_jwt()
+            if claims.get("role") not in roles:
+                return jsonify({"error": "Forbidden"}), 403
+            return fn(*args, **kwargs)
+        inner.__name__ = fn.__name__
+        return jwt_required()(inner)
+    return wrapper
+
+@issues_bp.get("/issues")
+@jwt_required()
+def get_issues():
+    issues = Issue.query.order_by(Issue.created_at.desc()).all()
+    return jsonify([
         {
-            "id": issue.id,
-            "title": issue.title,
-            "description": issue.description,
-            "roomNumber": issue.room_number,
-            "status": issue.status,
-            "createdBy": issue.created_by,
-            "createdAt": issue.created_at.isoformat(),
-            "upvotes": issue.upvotes,
-            "voters": issue.voters.split(',') if issue.voters else []
-        } for issue in issues
-        ]
-        return jsonify(results)
+            "id": i.id,
+            "title": i.title,
+            "description": i.description,
+            "roomNumber": i.room_number,
+            "status": i.status,
+            "createdBy": i.created_by,
+            "createdAt": i.created_at.isoformat(),
+            "upvotes": i.upvotes,
+            "voters": i.voters.split(",") if i.voters else []
+        } for i in issues
+    ])
 
+@issues_bp.post("/issues")
+@role_required("student", "admin")
+def create_issue():
+    claims = get_jwt()
+    data = request.get_json() or {}
+    if not all([data.get("title"), data.get("description"), data.get("roomNumber")]):
+        return jsonify({"error": "Missing fields"}), 400
+    issue = Issue(
+        title=data["title"],
+        description=data["description"],
+        room_number=data["roomNumber"],
+        created_by=claims.get("email")
+    )
+    db.session.add(issue)
+    db.session.commit()
+    return jsonify({"message": "Issue created", "id": issue.id}), 201
 
-    @app.route("/api/issues", methods=['POST'])
-    def create_issue():
-        data = request.get_json()
+@issues_bp.post("/issues/<int:issue_id>/status")
+@role_required("admin")
+def update_status(issue_id):
+    data = request.get_json() or {}
+    new_status = data.get("status")
+    if not new_status:
+        return jsonify({"error": "Missing status"}), 400
+    issue = Issue.query.get_or_404(issue_id)
+    issue.status = new_status
+    db.session.commit()
+    return jsonify({"message": "Status updated"})
 
-        if not data:
-            return jsonify({"error": "Invalid input"}), 400
-
-        new_issue = Issue(
-            title=data.get('title'),
-            description=data.get('description'),
-            room_number=data.get('roomNumber'),
-            created_by=data.get('createdBy')
-        )
-
-        db.session.add(new_issue)
-        db.session.commit()
-
-        return jsonify({
-        "message": "Issue created successfully!",
-        "issue": {
-            "id": new_issue.id,
-            "title": new_issue.title,
-            "description": new_issue.description,
-            "roomNumber": new_issue.room_number,
-            "status": new_issue.status,
-            "createdBy": new_issue.created_by,
-            "createdAt": new_issue.created_at.isoformat(),
-            "upvotes": new_issue.upvotes,
-            "voters": []
-        }
-        }), 201 
+@issues_bp.post("/issues/<int:issue_id>/upvote")
+@role_required("student", "admin")
+def upvote(issue_id):
+    claims = get_jwt()
+    email = claims.get("email")
+    issue = Issue.query.get_or_404(issue_id)
+    voters = set(filter(None, (issue.voters or "").split(",")))
+    if email in voters:
+        return jsonify({"error": "Already voted"}), 409
+    voters.add(email)
+    issue.voters = ",".join(voters)
+    issue.upvotes = len(voters)
+    db.session.commit()
+    return jsonify({"upvotes": issue.upvotes})

@@ -1,11 +1,19 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from '@/services/mockData';
-import { authApi } from '@/services/mockApi';
+import React, { createContext, useContext, useState, useEffect } from "react";
+
+const API_BASE = "http://localhost:5000";
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: "student" | "admin" | "repairer";
+  roomNo?: string;
+}
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
-  signup: (userData: Omit<User, 'id'>) => Promise<boolean>;
+  signup: (userData: any) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -14,47 +22,91 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(
+    localStorage.getItem("access_token")
+  );
 
-  // Load user from sessionStorage on mount
+  // 🔥 Restore user on refresh
   useEffect(() => {
-    const savedUser = sessionStorage.getItem('user');
+    const savedUser = sessionStorage.getItem("user");
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
   }, []);
 
+  // 🔥 Fetch profile when token changes
+  useEffect(() => {
+    if (token) fetchProfile();
+  }, [token]);
+
+  const fetchProfile = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/me`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` },
+      });
+      if (!res.ok) throw new Error("Failed to load profile");
+      const data = await res.json();
+      const profile: User = {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        roomNo: data.roomNo || "",
+      };
+      setUser(profile);
+      sessionStorage.setItem("user", JSON.stringify(profile)); // persist user
+    } catch (err) {
+      console.error("Profile error:", err);
+      logout();
+    }
+  };
+
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // TODO: Replace with actual backend authentication with JWT tokens
-      const loggedInUser = await authApi.login(email, password);
-      if (loggedInUser) {
-        setUser(loggedInUser);
-        sessionStorage.setItem('user', JSON.stringify(loggedInUser));
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Login error:', error);
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) return false;
+
+      const data = await res.json();
+      localStorage.setItem("access_token", data.access);
+      setToken(data.access);
+
+      // Ensure profile is loaded before proceeding
+      await fetchProfile();
+      return true;
+    } catch (err) {
+      console.error("Login failed:", err);
       return false;
     }
   };
 
-  const signup = async (userData: Omit<User, 'id'>): Promise<boolean> => {
+  const signup = async (form: any): Promise<boolean> => {
     try {
-      // TODO: Replace with actual backend user registration
-      const newUser = await authApi.signup(userData);
-      setUser(newUser);
-      sessionStorage.setItem('user', JSON.stringify(newUser));
-      return true;
-    } catch (error) {
-      console.error('Signup error:', error);
+      const res = await fetch(`${API_BASE}/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          full_name: form.name,
+          email: form.email,
+          password: form.password,
+          role: form.role || "student",
+        }),
+      });
+      return res.ok;
+    } catch (err) {
+      console.error("Signup failed:", err);
       return false;
     }
   };
 
   const logout = () => {
+    localStorage.removeItem("access_token");
+    sessionStorage.removeItem("user");
     setUser(null);
-    sessionStorage.removeItem('user');
+    setToken(null);
   };
 
   return (
@@ -73,9 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
+  return ctx;
 };

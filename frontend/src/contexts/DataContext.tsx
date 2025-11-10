@@ -1,12 +1,9 @@
-// src/contexts/DataContext.tsx
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { toast } from "sonner";
+import { useAuth } from "./AuthContext";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { toast } from 'sonner';
+const API_BASE = "http://localhost:5000";
 
-const API_BASE_URL = '';
-
-// --- INTERFACES ---
-// These are our official data structures now.
 export interface Category {
   id: string;
   name: string;
@@ -17,7 +14,7 @@ export interface Issue {
   title: string;
   description: string;
   roomNumber: string;
-  status: 'Pending' | 'In Progress' | 'Resolved';
+  status: "Pending" | "In Progress" | "Resolved";
   createdBy: string;
   createdAt: string;
   upvotes: number;
@@ -32,166 +29,171 @@ export interface Notice {
   createdAt: string;
 }
 
-// A simple type for repairers for now
 export interface Repairer {
   id: string;
   name: string;
 }
 
-// --- CONTEXT TYPE DEFINITION ---
-// We define EVERYTHING the app might need from this context.
 interface DataContextType {
   issues: Issue[];
   notices: Notice[];
   categories: Category[];
-  repairers: Repairer[]; // Added repairers
+  repairers: Repairer[];
   loading: boolean;
   addIssue: (issue: any) => Promise<void>;
   addNotice: (notice: any) => Promise<void>;
-  updateIssue: (issueId: number, updates: Partial<Issue>) => Promise<void>; // Added
-  deleteIssue: (issueId: number) => Promise<boolean>; // Added
-  deleteNotice: (noticeId: number) => Promise<boolean>; // Added
-  upvoteIssue: (issueId: number, userId: string) => Promise<void>; // Added
-  downvoteIssue: (issueId: number, userId: string) => Promise<void>; // Added
+  updateIssue: (issueId: number, updates: Partial<Issue>) => Promise<void>;
+  deleteIssue: (issueId: number) => Promise<boolean>;
+  deleteNotice: (noticeId: number) => Promise<boolean>;
+  upvoteIssue: (issueId: number) => Promise<void>;
+  downvoteIssue: (issueId: number) => Promise<void>;
 }
 
-export const DataContext = createContext<DataContextType | undefined>(undefined);
+const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  const token = localStorage.getItem("access_token");
   const [issues, setIssues] = useState<Issue[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [repairers, setRepairers] = useState<Repairer[]>([]); // Added state for repairers
+  const [repairers, setRepairers] = useState<Repairer[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const headers = token
+    ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+    : { "Content-Type": "application/json" };
 
   const fetchAllData = async () => {
     try {
       setLoading(true);
       const [issuesRes, categoriesRes, noticesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/issues`),
-        fetch(`${API_BASE_URL}/api/categories`),
-        fetch(`${API_BASE_URL}/api/notices`),
+        fetch(`${API_BASE}/api/issues`, { headers }),
+        fetch(`${API_BASE}/api/categories`, { headers }),
+        fetch(`${API_BASE}/api/notices`, { headers }),
       ]);
 
-      if (!issuesRes.ok || !categoriesRes.ok || !noticesRes.ok) {
-        throw new Error('Failed to fetch data');
-      }
+      if (!issuesRes.ok || !categoriesRes.ok || !noticesRes.ok)
+        throw new Error("Failed to fetch data");
 
-      const issuesData = await issuesRes.json();
-      const categoriesData = await categoriesRes.json();
-      const noticesData = await noticesRes.json();
-      
-      setIssues(issuesData);
-      setCategories(categoriesData);
-      setNotices(noticesData);
-      // For now, repairers are mock data
-      setRepairers([{ id: 'r1', name: 'Repairer Mike' }, { id: 'r2', name: 'Repairer Tom' }]);
-
-    } catch (error) {
-      console.error("Failed to fetch data:", error);
-      toast.error("Failed to load data from the server.");
+      setIssues(await issuesRes.json());
+      setCategories(await categoriesRes.json());
+      setNotices(await noticesRes.json());
+      setRepairers([
+        { id: "r1", name: "Repairer Mike" },
+        { id: "r2", name: "Repairer Tom" },
+      ]);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to fetch data from server");
     } finally {
       setLoading(false);
     }
   };
-  
+
+  // Issue Operations
   const addIssue = async (issueData: any) => {
-    // This function is already correct
     try {
-      const response = await fetch(`${API_BASE_URL}/api/issues`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch(`${API_BASE}/api/issues`, {
+        method: "POST",
+        headers,
         body: JSON.stringify(issueData),
       });
-      if (!response.ok) throw new Error('Failed to create issue');
-      const result = await response.json();
-      setIssues(prev => [result.issue, ...prev]);
-      toast.success(result.message || 'Issue reported successfully!');
-    } catch (error) {
-      toast.error("Failed to report issue.");
-      throw error;
+      if (!res.ok) throw new Error();
+      await fetchAllData();
+      toast.success("Issue reported successfully!");
+    } catch {
+      toast.error("Failed to report issue");
     }
   };
 
-  const addNotice = async (noticeData: any) => {
-    // This function is also correct
+  const updateIssue = async (issueId: number, updates: Partial<Issue>) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/notices`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch(`${API_BASE}/api/issues/${issueId}/status`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(updates),
+      });
+      if (!res.ok) throw new Error();
+      await fetchAllData();
+      toast.success("Issue updated");
+    } catch {
+      toast.error("Failed to update issue");
+    }
+  };
+
+  const deleteIssue = async (issueId: number) => {
+    setIssues((prev) => prev.filter((i) => i.id !== issueId));
+    toast.info("Issue deleted locally (backend deletion not implemented)");
+    return true;
+  };
+
+  const upvoteIssue = async (issueId: number) => {
+    try {
+      await fetch(`${API_BASE}/api/issues/${issueId}/upvote`, {
+        method: "POST",
+        headers,
+      });
+      await fetchAllData();
+    } catch {
+      toast.error("Failed to upvote");
+    }
+  };
+
+  const downvoteIssue = async () => {
+    toast.info("Downvote not supported on backend yet");
+  };
+
+  // Notice Operations
+  const addNotice = async (noticeData: any) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/notices`, {
+        method: "POST",
+        headers,
         body: JSON.stringify(noticeData),
       });
-      if (!response.ok) throw new Error('Failed to create notice');
-      const result = await response.json();
-      setNotices(prev => [result.notice, ...prev]);
-      toast.success(result.message || 'Notice created successfully!');
-    } catch (error) {
-      toast.error("Failed to create notice.");
-      throw error;
+      if (!res.ok) throw new Error();
+      await fetchAllData();
+      toast.success("Notice created successfully!");
+    } catch {
+      toast.error("Failed to create notice");
     }
   };
 
-  // --- PLACEHOLDER FUNCTIONS ---
-  // We add these functions so other components don't crash.
-  // We will implement their backend logic later.
-  const updateIssue = async (issueId: number, updates: Partial<Issue>) => {
-    console.log("TODO: updateIssue", issueId, updates);
-    toast.info("Update issue functionality is not yet implemented.");
-    // Example of how it would work:
-    // const issue = issues.find(i => i.id === issueId);
-    // if (issue) setIssues(issues.map(i => i.id === issueId ? { ...i, ...updates } : i));
-  };
-  
-  const deleteIssue = async (issueId: number): Promise<boolean> => {
-    console.log("TODO: deleteIssue", issueId);
-    toast.info("Delete issue functionality is not yet implemented.");
-    return false;
-  };
-  
-  const deleteNotice = async (noticeId: number): Promise<boolean> => {
-    console.log("TODO: deleteNotice", noticeId);
-    toast.info("Delete notice functionality is not yet implemented.");
-    return false;
-  };
-  
-  const upvoteIssue = async (issueId: number, userId: string) => {
-    console.log("TODO: upvoteIssue", issueId, userId);
-    toast.info("Upvote functionality is not yet implemented.");
+  const deleteNotice = async (noticeId: number) => {
+    setNotices((prev) => prev.filter((n) => n.id !== noticeId));
+    toast.info("Notice deleted locally (backend deletion not implemented)");
+    return true;
   };
 
-  const downvoteIssue = async (issueId: number, userId: string) => {
-    console.log("TODO: downvoteIssue", issueId, userId);
-    toast.info("Downvote functionality is not yet implemented.");
-  };
-  
   useEffect(() => {
-    fetchAllData();
-  }, []);
+    if (token) fetchAllData();
+  }, [token]);
 
   return (
-    <DataContext.Provider value={{
-      issues,
-      notices,
-      categories,
-      repairers,
-      loading,
-      addIssue,
-      addNotice,
-      updateIssue,
-      deleteIssue,
-      deleteNotice,
-      upvoteIssue,
-      downvoteIssue,
-    }}>
+    <DataContext.Provider
+      value={{
+        issues,
+        notices,
+        categories,
+        repairers,
+        loading,
+        addIssue,
+        addNotice,
+        updateIssue,
+        deleteIssue,
+        deleteNotice,
+        upvoteIssue,
+        downvoteIssue,
+      }}
+    >
       {children}
     </DataContext.Provider>
   );
 };
 
 export const useData = () => {
-  const context = useContext(DataContext);
-  if (context === undefined) {
-    throw new Error('useData must be used within a DataProvider');
-  }
-  return context;
+  const ctx = useContext(DataContext);
+  if (!ctx) throw new Error("useData must be used within a DataProvider");
+  return ctx;
 };
