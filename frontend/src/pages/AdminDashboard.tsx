@@ -1,14 +1,22 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
-import { useData } from '@/contexts/DataContext';
-import { IssueModal } from '@/components/IssueModal';
-import { NoticeForm } from '@/components/NoticeForm';
-import { StatusBadge } from '@/components/StatusBadge';
-import { Issue, Notice } from '@/contexts/DataContext';
-import { ClipboardList, Wrench, Megaphone, LogOut, Edit, Trash2, Eye, Plus } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useData } from "@/contexts/DataContext";
+import { IssueModal } from "@/components/IssueModal";
+import { NoticeForm } from "@/components/NoticeForm";
+import { Issue, Notice } from "@/contexts/DataContext";
+import {
+  ClipboardList,
+  Wrench,
+  Megaphone,
+  LogOut,
+  Edit,
+  Trash2,
+  Eye,
+  Plus,
+} from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import {
   Table,
   TableBody,
@@ -16,14 +24,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,14 +41,28 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+} from "@/components/ui/alert-dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { WorkerForm } from "@/components/WorkerForm";
+
+const API_BASE = "http://localhost:5000";
 
 const AdminDashboard = () => {
+  const [workerFormOpen, setWorkerFormOpen] = useState(false);
+  const [workers, setWorkers] = useState<any[]>([]);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { issues, notices, categories, addNotice,repairers, updateIssue, deleteNotice } = useData();
-  const [activeTab, setActiveTab] = useState<'issues' | 'notices'>('issues');
+  const {
+    issues,
+    notices,
+    addNotice,
+    updateIssue,
+    deleteNotice,
+  } = useData();
+
+  const [activeTab, setActiveTab] = useState<"issues" | "notices" | "workers">(
+    "issues"
+  );
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [noticeFormOpen, setNoticeFormOpen] = useState(false);
@@ -50,7 +72,7 @@ const AdminDashboard = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    navigate("/");
   };
 
   const handleView = (issue: Issue) => {
@@ -58,17 +80,17 @@ const AdminDashboard = () => {
     setViewModalOpen(true);
   };
 
-  const handleStatusChange = async (issueId: number, newStatus: Issue['status']) => {
-    // TODO: Backend should verify admin role before allowing status update
+  const handleStatusChange = async (
+    issueId: number,
+    newStatus: Issue["status"]
+  ) => {
     const updates: Partial<Issue> = { status: newStatus };
     await updateIssue(issueId, updates);
     toast({
-      title: 'Status updated',
+      title: "Status updated",
       description: `Issue status changed to ${newStatus}`,
     });
   };
-
-  // Removed repairer assignment as current Issue type does not include it
 
   const handleEditNotice = (notice: Notice) => {
     setEditingNotice(notice);
@@ -82,19 +104,18 @@ const AdminDashboard = () => {
 
   const confirmDeleteNotice = async () => {
     if (!noticeToDelete) return;
-    
-    // TODO: Backend should verify admin role before allowing delete
+
     const success = await deleteNotice(noticeToDelete);
     if (success) {
       toast({
-        title: 'Notice deleted',
-        description: 'Notice has been removed',
+        title: "Notice deleted",
+        description: "Notice has been removed",
       });
     } else {
       toast({
-        title: 'Error',
-        description: 'Failed to delete notice',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to delete notice",
+        variant: "destructive",
       });
     }
     setDeleteDialogOpen(false);
@@ -106,6 +127,31 @@ const AdminDashboard = () => {
     setNoticeFormOpen(true);
   };
 
+  // --- Fetch workers list from backend ---
+  const fetchWorkers = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/workers`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+      });
+      if (!res.ok) throw new Error("Failed to fetch workers");
+      const data = await res.json();
+      setWorkers(data);
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "Error fetching workers",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "workers") fetchWorkers();
+  }, [activeTab, workerFormOpen]); // refresh after adding a worker
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -113,7 +159,9 @@ const AdminDashboard = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">{user?.name} (Admin)</span>
+            <span className="text-sm text-muted-foreground">
+              {user?.name} (Admin)
+            </span>
             <Button variant="outline" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-2" />
               Logout
@@ -127,30 +175,40 @@ const AdminDashboard = () => {
         <div className="container mx-auto px-4">
           <div className="flex gap-2">
             <Button
-              variant={activeTab === 'issues' ? 'default' : 'ghost'}
-              onClick={() => setActiveTab('issues')}
+              variant={activeTab === "issues" ? "default" : "ghost"}
+              onClick={() => setActiveTab("issues")}
               className="gap-2"
             >
               <ClipboardList className="h-4 w-4" />
               All Complaints
             </Button>
             <Button
-              variant={activeTab === 'notices' ? 'default' : 'ghost'}
-              onClick={() => setActiveTab('notices')}
+              variant={activeTab === "notices" ? "default" : "ghost"}
+              onClick={() => setActiveTab("notices")}
               className="gap-2"
             >
               <Megaphone className="h-4 w-4" />
               Manage Notices
             </Button>
+            <Button
+              variant={activeTab === "workers" ? "default" : "ghost"}
+              onClick={() => setActiveTab("workers")}
+              className="gap-2"
+            >
+              <Wrench className="h-4 w-4" />
+              Manage Workers
+            </Button>
           </div>
         </div>
       </nav>
 
-      {/* Main Content */}
+      {/* Main */}
       <main className="container mx-auto px-4 py-8">
-        {activeTab === 'issues' && (
+        {activeTab === "issues" && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-foreground">All Complaints</h2>
+            <h2 className="text-2xl font-semibold text-foreground">
+              All Complaints
+            </h2>
             <Card>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
@@ -160,50 +218,52 @@ const AdminDashboard = () => {
                         <TableHead>ID</TableHead>
                         <TableHead>Student</TableHead>
                         <TableHead>Room</TableHead>
-                        {/* Category removed: not present on Issue */}
                         <TableHead>Title</TableHead>
                         <TableHead>Status</TableHead>
-                        {/* Repairer removed: not present on Issue */}
                         <TableHead>Upvotes</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {issues.map((issue) => {
-                        // Removed category and repairer lookups (not in Issue type)
-                        
-                        return (
-                          <TableRow key={issue.id}>
-                            <TableCell className="font-mono text-xs">{issue.id}</TableCell>
-                            <TableCell>{issue.createdBy}</TableCell>
-                            <TableCell>{issue.roomNumber}</TableCell>
-                            {/* <TableCell>{category}</TableCell> */}
-                            <TableCell className="max-w-xs truncate">{issue.title}</TableCell>
-                            <TableCell>
-                              <Select
-                                value={issue.status}
-                                onValueChange={(value) => handleStatusChange(issue.id, value as Issue['status'])}
-                              >
-                                <SelectTrigger className="w-[140px]">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Pending">Pending</SelectItem>
-                                  <SelectItem value="In Progress">In Progress</SelectItem>
-                                  <SelectItem value="Resolved">Resolved</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            {/* Removed repairer assignment column */}
-                            <TableCell>{issue.upvotes}</TableCell>
-                            <TableCell>
-                              <Button variant="ghost" size="sm" onClick={() => handleView(issue)}>
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                      {issues.map((issue) => (
+                        <TableRow key={issue.id}>
+                          <TableCell>{issue.id}</TableCell>
+                          <TableCell>{issue.createdBy}</TableCell>
+                          <TableCell>{issue.roomNumber}</TableCell>
+                          <TableCell className="max-w-xs truncate">
+                            {issue.title}
+                          </TableCell>
+                          <TableCell>
+                            <Select
+                              value={issue.status}
+                              onValueChange={(v) =>
+                                handleStatusChange(issue.id, v as Issue["status"])
+                              }
+                            >
+                              <SelectTrigger className="w-[140px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Pending">Pending</SelectItem>
+                                <SelectItem value="In Progress">
+                                  In Progress
+                                </SelectItem>
+                                <SelectItem value="Resolved">Resolved</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>{issue.upvotes}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleView(issue)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 </div>
@@ -212,10 +272,12 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {activeTab === 'notices' && (
+        {activeTab === "notices" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold text-foreground">Manage Notices</h2>
+              <h2 className="text-2xl font-semibold text-foreground">
+                Manage Notices
+              </h2>
               <Button onClick={handleNewNotice}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Notice
@@ -229,11 +291,16 @@ const AdminDashboard = () => {
                       <div>
                         <CardTitle>{notice.title}</CardTitle>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Posted: {new Date(notice.createdAt).toLocaleDateString()}
+                          Posted:{" "}
+                          {new Date(notice.createdAt).toLocaleDateString()}
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEditNotice(notice)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditNotice(notice)}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
@@ -247,8 +314,45 @@ const AdminDashboard = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-foreground whitespace-pre-wrap">{notice.content}</p>
+                    <p className="text-sm text-foreground whitespace-pre-wrap">
+                      {notice.content}
+                    </p>
                   </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "workers" && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-semibold text-foreground">
+                Manage Workers
+              </h2>
+              <Button onClick={() => setWorkerFormOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Worker
+              </Button>
+            </div>
+
+            <div className="grid gap-4">
+              {workers.map((worker) => (
+                <Card key={worker.id}>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <CardTitle>{worker.name}</CardTitle>
+                      <p className="text-xs text-muted-foreground">
+                        ID: {worker.id}
+                      </p>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {worker.email} —{" "}
+                      <span className="font-medium">
+                        {worker.worker_type || "General"}
+                      </span>
+                    </p>
+                  </CardHeader>
                 </Card>
               ))}
             </div>
@@ -257,7 +361,15 @@ const AdminDashboard = () => {
       </main>
 
       {/* Modals */}
-      <IssueModal issue={selectedIssue} open={viewModalOpen} onOpenChange={setViewModalOpen} />
+      <IssueModal
+        issue={selectedIssue}
+        open={viewModalOpen}
+        onOpenChange={setViewModalOpen}
+      />
+      <WorkerForm
+        open={workerFormOpen}
+        onOpenChange={setWorkerFormOpen}
+      />
       <NoticeForm
         open={noticeFormOpen}
         onOpenChange={setNoticeFormOpen}
@@ -268,12 +380,15 @@ const AdminDashboard = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Notice</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this notice? This action cannot be undone.
+              Are you sure you want to delete this notice? This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteNotice}>Delete</AlertDialogAction>
+            <AlertDialogAction onClick={confirmDeleteNotice}>
+              Delete
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

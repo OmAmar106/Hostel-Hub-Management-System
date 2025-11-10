@@ -4,12 +4,13 @@ from flask_jwt_extended import (
     create_access_token, create_refresh_token,
     jwt_required, get_jwt_identity, get_jwt
 )
-from model import db, User
+from model import db, User, WorkerInfo
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 def _claims(user):
     return {"role": user.role, "email": user.email, "name": user.full_name}
+
 
 @auth_bp.post("/signup")
 def signup():
@@ -41,10 +42,54 @@ def login():
     refresh = create_refresh_token(identity=str(user.id), additional_claims=_claims(user))
     return jsonify({"access": access, "refresh": refresh})
 
+@auth_bp.post("/create-worker")
+@jwt_required()
+def create_worker():
+    claims = get_jwt()
+    if claims.get("role") != "admin":
+        return jsonify({"error": "Admins only"}), 403
+
+    data = request.get_json() or {}
+    name = data.get("full_name")
+    email = data.get("email")
+    pwd = data.get("password")
+    worker_type = data.get("worker_type", "General")
+
+    if not name or not email or not pwd:
+        return jsonify({"error": "Missing required fields"}), 400
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "Email already exists"}), 409
+
+    worker = User(
+        full_name=name,
+        email=email,
+        password_hash=generate_password_hash(pwd),
+        role="worker"
+    )
+    db.session.add(worker)
+    db.session.flush() 
+    info = WorkerInfo(
+        user_id=worker.id,
+        worker_type=worker_type,
+    )
+    db.session.add(info)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Worker account created successfully",
+        "worker": {
+            "id": worker.id,
+            "name": worker.full_name,
+            "email": worker.email,
+            "role": worker.role,
+            "worker_type": info.worker_type,
+        }
+    }), 201
+
 @auth_bp.get("/me")
 @jwt_required()
 def me():
-    user = User.query.get(get_jwt_identity())
+    user = User.query.get(int(get_jwt_identity()))
     return jsonify({
         "id": user.id,
         "name": user.full_name,

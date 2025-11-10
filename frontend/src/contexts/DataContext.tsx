@@ -67,29 +67,46 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const fetchAllData = async () => {
     try {
       setLoading(true);
-      const [issuesRes, categoriesRes, noticesRes] = await Promise.all([
+
+      const [issuesRes, categoriesRes, noticesRes, workersRes] = await Promise.all([
         fetch(`${API_BASE}/api/issues`, { headers }),
         fetch(`${API_BASE}/api/categories`, { headers }),
         fetch(`${API_BASE}/api/notices`, { headers }),
+        fetch(`${API_BASE}/api/workers`, { headers }),
       ]);
 
-      if (!issuesRes.ok || !categoriesRes.ok || !noticesRes.ok)
-        throw new Error("Failed to fetch data");
+      if ([issuesRes, categoriesRes, noticesRes, workersRes].some(r => r.status === 401 || r.status === 422)) {
+        toast.error("Session expired. Please log in again.");
+        localStorage.removeItem("access_token");
+        sessionStorage.removeItem("user");
+        window.location.href = "/login";
+        return;
+      }
 
-      setIssues(await issuesRes.json());
-      setCategories(await categoriesRes.json());
-      setNotices(await noticesRes.json());
-      setRepairers([
-        { id: "r1", name: "Repairer Mike" },
-        { id: "r2", name: "Repairer Tom" },
+      if (![issuesRes.ok, categoriesRes.ok, noticesRes.ok, workersRes.ok].every(Boolean))
+        throw new Error("Failed to fetch some resources");
+
+      const [issuesData, categoriesData, noticesData, workersData] = await Promise.all([
+        issuesRes.json(),
+        categoriesRes.json(),
+        noticesRes.json(),
+        workersRes.json(),
       ]);
+
+      setIssues(issuesData);
+      setCategories(categoriesData);
+      setNotices(noticesData);
+
+      const repairerList = workersData.filter((w: any) => w.role === "worker");
+      setRepairers(repairerList);
     } catch (err) {
-      console.error(err);
+      console.error("fetchAllData error:", err);
       toast.error("Failed to fetch data from server");
     } finally {
       setLoading(false);
     }
   };
+
 
   // Issue Operations
   const addIssue = async (issueData: any) => {

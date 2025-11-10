@@ -12,39 +12,46 @@ import StudentDashboard from "./pages/StudentDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import RepairerDashboard from "./pages/RepairerDashboard";
 import NotFound from "./pages/NotFound";
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 const queryClient = new QueryClient();
 
-// Protected route wrapper
-const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: string[] }) => {
+// Protected route
+const ProtectedRoute = ({
+  children,
+  allowedRoles,
+}: {
+  children: React.ReactNode;
+  allowedRoles: string[];
+}) => {
   const { user, isAuthenticated } = useAuth();
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  if (user && !allowedRoles.includes(user.role)) {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => setLoading(false), 400);
+    return () => clearTimeout(timeout);
+  }, [user]);
+
+  if (loading) return null;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user && !allowedRoles.includes(user.role))
     return <Navigate to="/dashboard" replace />;
-  }
-  
+
   return <>{children}</>;
 };
 
-// Dashboard router based on user role
+// Role router
 const DashboardRouter = () => {
   const { user } = useAuth();
-  
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  
+
+  if (!user) return <Navigate to="/login" replace />;
+
   switch (user.role) {
-    case 'student':
+    case "student":
       return <StudentDashboard />;
-    case 'admin':
+    case "admin":
       return <AdminDashboard />;
-    case 'repairer':
+    case "repairer":
       return <RepairerDashboard />;
     default:
       return <Navigate to="/login" replace />;
@@ -52,35 +59,33 @@ const DashboardRouter = () => {
 };
 
 const App = () => {
-  // Add this state to store the message from the backend
-   // The empty array [] means this effect runs only once
   return (
-  <QueryClientProvider client={queryClient}>
     <BrowserRouter>
-      <AuthProvider>
-        <DataProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route 
-                path="/dashboard" 
-                element={
-                  <ProtectedRoute allowedRoles={['student', 'admin', 'repairer']}>
-                    <DashboardRouter />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </TooltipProvider>
-        </DataProvider>
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <DataProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute allowedRoles={["student", "admin", "repairer"]}>
+                      <DashboardRouter />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </TooltipProvider>
+          </DataProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     </BrowserRouter>
-  </QueryClientProvider>
   );
 };
 
