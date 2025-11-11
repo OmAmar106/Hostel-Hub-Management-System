@@ -175,7 +175,7 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    if (activeTab === "workers") fetchWorkers();
+      fetchWorkers();
   }, [activeTab, workerFormOpen]);
 
   return (
