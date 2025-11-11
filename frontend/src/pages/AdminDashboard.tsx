@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkerForm } from "@/components/WorkerForm";
+import ThemeToggle from "@/components/ui/ThemeToggle"; // ✅ Added import
 
 const API_BASE = "http://localhost:5000";
 
@@ -52,13 +53,7 @@ const AdminDashboard = () => {
   const [workers, setWorkers] = useState<any[]>([]);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const {
-    issues,
-    notices,
-    addNotice,
-    updateIssue,
-    deleteNotice,
-  } = useData();
+  const { issues, notices, addNotice, updateIssue, deleteNotice } = useData();
 
   const [activeTab, setActiveTab] = useState<"issues" | "notices" | "workers">(
     "issues"
@@ -150,19 +145,30 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (activeTab === "workers") fetchWorkers();
-  }, [activeTab, workerFormOpen]); // refresh after adding a worker
+  }, [activeTab, workerFormOpen]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
       {/* Header */}
-      <header className="border-b bg-card">
+      <header className="border-b bg-white dark:bg-gray-800 dark:border-gray-700">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            Admin Dashboard
+          </h1>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-gray-700 dark:text-gray-300">
               {user?.name} (Admin)
             </span>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
+
+            {/* ✅ Dark/Light Mode Toggle Button */}
+            <ThemeToggle />
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+            >
               <LogOut className="h-4 w-4 mr-2" />
               Logout
             </Button>
@@ -171,9 +177,9 @@ const AdminDashboard = () => {
       </header>
 
       {/* Navigation */}
-      <nav className="border-b bg-card">
+      <nav className="border-b bg-white dark:bg-gray-800 dark:border-gray-700">
         <div className="container mx-auto px-4">
-          <div className="flex gap-2">
+          <div className="flex gap-2 py-2">
             <Button
               variant={activeTab === "issues" ? "default" : "ghost"}
               onClick={() => setActiveTab("issues")}
@@ -206,10 +212,10 @@ const AdminDashboard = () => {
       <main className="container mx-auto px-4 py-8">
         {activeTab === "issues" && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-foreground">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
               All Complaints
             </h2>
-            <Card>
+            <Card className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <Table>
@@ -275,7 +281,7 @@ const AdminDashboard = () => {
         {activeTab === "notices" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold text-foreground">
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
                 Manage Notices
               </h2>
               <Button onClick={handleNewNotice}>
@@ -285,12 +291,15 @@ const AdminDashboard = () => {
             </div>
             <div className="grid gap-4">
               {notices.map((notice) => (
-                <Card key={notice.id}>
+                <Card
+                  key={notice.id}
+                  className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                >
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
                         <CardTitle>{notice.title}</CardTitle>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                           Posted:{" "}
                           {new Date(notice.createdAt).toLocaleDateString()}
                         </p>
@@ -314,7 +323,7 @@ const AdminDashboard = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-foreground whitespace-pre-wrap">
+                    <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
                       {notice.content}
                     </p>
                   </CardContent>
@@ -327,7 +336,7 @@ const AdminDashboard = () => {
         {activeTab === "workers" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold text-foreground">
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
                 Manage Workers
               </h2>
               <Button onClick={() => setWorkerFormOpen(true)}>
@@ -338,15 +347,18 @@ const AdminDashboard = () => {
 
             <div className="grid gap-4">
               {workers.map((worker) => (
-                <Card key={worker.id}>
+                <Card
+                  key={worker.id}
+                  className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                >
                   <CardHeader>
                     <div className="flex justify-between items-center">
                       <CardTitle>{worker.name}</CardTitle>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
                         ID: {worker.id}
                       </p>
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
                       {worker.email} —{" "}
                       <span className="font-medium">
                         {worker.worker_type || "General"}
@@ -366,10 +378,7 @@ const AdminDashboard = () => {
         open={viewModalOpen}
         onOpenChange={setViewModalOpen}
       />
-      <WorkerForm
-        open={workerFormOpen}
-        onOpenChange={setWorkerFormOpen}
-      />
+      <WorkerForm open={workerFormOpen} onOpenChange={setWorkerFormOpen} />
       <NoticeForm
         open={noticeFormOpen}
         onOpenChange={setNoticeFormOpen}
