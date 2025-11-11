@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import ProfileAvatar from "@/components/ui/ProfileAvatar";
 import {
   Wrench,
   LogOut,
@@ -119,18 +120,8 @@ const RepairerDashboard = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold">Worker Dashboard</h1>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-700 dark:text-gray-300">
-              {user?.name} (Worker)
-            </span>
             <ThemeToggle />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-            >
-              <LogOut className="h-4 w-4 mr-2" /> Logout
-            </Button>
+            <ProfileAvatar />
           </div>
         </div>
       </header>
