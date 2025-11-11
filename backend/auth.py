@@ -101,32 +101,42 @@ def me():
 @auth_bp.route("/update-profile", methods=["PUT"])
 @jwt_required()
 def update_profile():
+    # ensure identity is correct type (tokens use str identity)
     user_id = int(get_jwt_identity())
     data = request.get_json(silent=True) or {}
 
     if not data:
         return jsonify({"msg": "Missing JSON body"}), 400
 
-    name = data.get("name")
+    # Accept both camelCase and snake_case just in case frontend/backends differ
+    name = data.get("name") or data.get("full_name")
     email = data.get("email")
+    room_no = data.get("roomNo") or data.get("room_no") or data.get("roomNo".lower())
 
     user = User.query.get(user_id)
     if not user:
         return jsonify({"msg": "User not found"}), 404
 
-    # update fields (adjust if your model uses full_name)
     if name:
+        # prefer full_name field on model
         if hasattr(user, "full_name"):
             user.full_name = name
         else:
             user.name = name
 
     if email:
-        # optional: uniqueness check
         existing = User.query.filter(User.email == email, User.id != user_id).first()
         if existing:
             return jsonify({"msg": "Email already in use"}), 400
         user.email = email
+
+    if room_no is not None:
+        # store into DB column (your model uses room_no)
+        if hasattr(user, "room_no"):
+            user.room_no = room_no
+        else:
+            # fallback to roomNo or roomNo-like attribute
+            setattr(user, "roomNo", room_no)
 
     db.session.commit()
     return jsonify({"msg": "Profile updated"}), 200
