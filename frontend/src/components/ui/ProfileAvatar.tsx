@@ -10,16 +10,20 @@ export default function ProfileAvatar() {
   // local form state (sync whenever the user object changes or modal opens)
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
+  const [roomNo, setRoomNo] = useState(user?.roomNo || ""); // <-- new
+
   useEffect(() => {
     setName(user?.name || "");
     setEmail(user?.email || "");
-  }, [user?.name, user?.email]);
+    setRoomNo(user?.roomNo || ""); // <-- sync
+  }, [user?.name, user?.email, user?.roomNo]);
 
   // ensure modal inputs show latest values when opened
   useEffect(() => {
     if (editOpen) {
       setName(user?.name || "");
       setEmail(user?.email || "");
+      setRoomNo(user?.roomNo || "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editOpen]);
@@ -42,7 +46,8 @@ export default function ProfileAvatar() {
   const hasChanged = () => {
     const oldName = (user?.name ?? "").trim();
     const oldEmail = (user?.email ?? "").trim();
-    return name.trim() !== oldName || email.trim() !== oldEmail;
+    const oldRoom = (user?.roomNo ?? "").trim();
+    return name.trim() !== oldName || email.trim() !== oldEmail || roomNo.trim() !== oldRoom;
   };
 
   const handleSave = async () => {
@@ -72,12 +77,15 @@ export default function ProfileAvatar() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          // Authorization header is added by backend if needed via JWT from localStorage (optional)
-          Authorization: localStorage.getItem("access_token")
-            ? `Bearer ${localStorage.getItem("access_token")}`
-            : "",
+          ...(localStorage.getItem("access_token")
+            ? { Authorization: `Bearer ${localStorage.getItem("access_token")}` }
+            : {}),
         },
-        body: JSON.stringify({ name: name.trim(), email: email.trim() }),
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          roomNo: roomNo.trim(), // <-- include roomNo
+        }),
       });
 
       if (!res.ok) {
@@ -186,6 +194,19 @@ export default function ProfileAvatar() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="w-full border rounded px-3 py-2 dark:bg-slate-700 dark:text-white"
+                />
+              </div>
+
+              {/* new room number field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                  Room No
+                </label>
+                <input
+                  type="text"
+                  value={roomNo}
+                  onChange={(e) => setRoomNo(e.target.value)}
                   className="w-full border rounded px-3 py-2 dark:bg-slate-700 dark:text-white"
                 />
               </div>
