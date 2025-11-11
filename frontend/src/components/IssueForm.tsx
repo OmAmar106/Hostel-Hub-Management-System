@@ -77,7 +77,6 @@ export const IssueForm = ({ open, onOpenChange, issue, addIssue }: IssueFormProp
           <DialogTitle>{issue ? 'Edit Issue' : 'Raise New Issue'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} id="issue-form" className="space-y-4">
-          {/* This is the category dropdown, it should now work */}
           <div>
             <Label htmlFor="category">Category</Label>
             <Select

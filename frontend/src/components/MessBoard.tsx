@@ -22,19 +22,16 @@ export const MessBoard: React.FC<MessBoardProps> = ({ messItems }) => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
           Weekly Mess Menu
         </h2>
       </div>
 
-      {/* Table */}
       <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm">
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto">
             <Table>
-              {/* Header Row */}
               <TableHeader className="bg-gray-100 dark:bg-gray-700">
                 <TableRow className="border-b border-gray-200 dark:border-gray-600">
                   <TableHead className="py-3 px-4 font-semibold text-gray-900 dark:text-gray-100 w-1/5">
@@ -75,7 +72,6 @@ export const MessBoard: React.FC<MessBoardProps> = ({ messItems }) => {
                 </TableRow>
               </TableHeader>
 
-              {/* Body */}
               <TableBody>
                 {DAYS.map((day) => {
                   const messItem = messMap.get(day);

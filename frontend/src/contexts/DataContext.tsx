@@ -121,6 +121,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const repairerList = workersData.filter((w: any) => w.role === "worker");
       // console.log(repairerList)
       setRepairers(repairerList);
+      setMessItems(messData);
     } catch (err) {
       console.error("fetchAllData error:", err);
       // toast.error("Failed to fetch data from server");

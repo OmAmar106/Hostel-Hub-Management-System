@@ -31,7 +31,6 @@ export const NoticeBoard = ({ notices }: NoticeBoardProps) => {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-foreground whitespace-pre-wrap">{notice.content}</p>
-                {/* expiryDate not present in current Notice type */}
               </CardContent>
             </Card>
           ))

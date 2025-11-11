@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from model import db, Notice
-from issues import role_required  # your existing decorator
+from issues import role_required 
 
 notices_bp = Blueprint("notices", __name__, url_prefix="/api")
 

@@ -16,7 +16,6 @@ interface MessFormProps {
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export const MessForm: React.FC<MessFormProps> = ({ messItems, onUpdate, onAdd }) => {
-  // Create a map of days to mess items for quick lookup
   const messMap = React.useMemo(() => {
     const map = new Map<string, MessItem>();
     messItems.forEach(item => {
@@ -25,7 +24,6 @@ export const MessForm: React.FC<MessFormProps> = ({ messItems, onUpdate, onAdd }
     return map;
   }, [messItems]);
 
-  // Track editing state for each day
   const [editingDays, setEditingDays] = useState<Set<string>>(new Set());
   const [editFormData, setEditFormData] = useState<Record<string, any>>({});
 
@@ -77,7 +75,6 @@ export const MessForm: React.FC<MessFormProps> = ({ messItems, onUpdate, onAdd }
 
     try {
       if (messItem) {
-        // Update existing
         await onUpdate(messItem.id, {
           day: day,
           breakfast: formData.breakfast,
@@ -86,7 +83,6 @@ export const MessForm: React.FC<MessFormProps> = ({ messItems, onUpdate, onAdd }
           dinner: formData.dinner,
         });
       } else {
-        // Create new
         await onAdd({
           day: day,
           breakfast: formData.breakfast,
@@ -123,6 +119,16 @@ export const MessForm: React.FC<MessFormProps> = ({ messItems, onUpdate, onAdd }
         [field]: value,
       }
     }));
+  };
+
+  // helper to render comma-separated text as separate lines
+  const renderLines = (text?: string) => {
+    if (!text || text.trim() === '') return '—';
+    return text.split(',').map((part, idx) => (
+      <div key={idx} className="leading-tight">
+        {part.trim()}
+      </div>
+    ));
   };
 
   return (
@@ -239,16 +245,16 @@ export const MessForm: React.FC<MessFormProps> = ({ messItems, onUpdate, onAdd }
                       ) : (
                         <>
                           <TableCell className="py-4 px-4 text-gray-700 dark:text-gray-300 text-sm">
-                            {messItem?.breakfast || '—'}
+                            {renderLines(messItem?.breakfast)}
                           </TableCell>
                           <TableCell className="py-4 px-4 text-gray-700 dark:text-gray-300 text-sm">
-                            {messItem?.lunch || '—'}
+                            {renderLines(messItem?.lunch)}
                           </TableCell>
                           <TableCell className="py-4 px-4 text-gray-700 dark:text-gray-300 text-sm">
-                            {messItem?.snacks || '—'}
+                            {renderLines(messItem?.snacks)}
                           </TableCell>
                           <TableCell className="py-4 px-4 text-gray-700 dark:text-gray-300 text-sm">
-                            {messItem?.dinner || '—'}
+                            {renderLines(messItem?.dinner)}
                           </TableCell>
                           <TableCell className="py-4 px-4">
                             <div className="flex justify-center">

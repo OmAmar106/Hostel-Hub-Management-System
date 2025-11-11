@@ -210,7 +210,6 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-      {/* Header */}
       <header className="border-b bg-white dark:bg-gray-800 dark:border-gray-700">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -234,7 +233,6 @@ const AdminDashboard = () => {
         </div>
       </header>
 
-      {/* Navigation */}
       <nav className="border-b bg-white dark:bg-gray-800 dark:border-gray-700">
         <div className="container mx-auto px-4">
           <div className="flex gap-2 py-2">
@@ -262,9 +260,7 @@ const AdminDashboard = () => {
         </div>
       </nav>
 
-      {/* Main */}
       <main className="container mx-auto px-4 py-8">
-        {/* ISSUES */}
         {activeTab === "issues" && (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
@@ -554,7 +550,6 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* MESS */}
         {activeTab === "mess" && (
           <MessForm 
             messItems={messItems}
@@ -564,7 +559,6 @@ const AdminDashboard = () => {
         )}
       </main>
 
-      {/* Modals */}
       <IssueModal
         issue={selectedIssue}
         open={viewModalOpen}
