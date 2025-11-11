@@ -45,6 +45,7 @@ def get_issues():
 def create_issue():
     claims = get_jwt()
     data = request.get_json() or {}
+
     if not all([data.get("title"), data.get("description"), data.get("roomNumber")]):
         return jsonify({"error": "Missing fields"}), 400
 
