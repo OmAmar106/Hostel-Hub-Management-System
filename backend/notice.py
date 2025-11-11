@@ -1,9 +1,10 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from model import db, Notice
-from issues import role_required
+from issues import role_required  # your existing decorator
 
 notices_bp = Blueprint("notices", __name__, url_prefix="/api")
+
 
 @notices_bp.get("/notices")
 @jwt_required()
@@ -19,6 +20,7 @@ def get_notices():
         } for n in notices
     ])
 
+
 @notices_bp.post("/notices")
 @role_required("admin")
 def create_notice():
@@ -29,3 +31,23 @@ def create_notice():
     db.session.add(notice)
     db.session.commit()
     return jsonify({"message": "Notice created", "id": notice.id}), 201
+
+
+@notices_bp.route("/notices/<int:notice_id>", methods=["PUT"])
+@role_required("admin")
+def update_notice(notice_id):
+    data = request.get_json() or {}
+    title = data.get("title")
+    content = data.get("content")
+
+    if not title or not content:
+        return jsonify({"error": "Missing title or content"}), 400
+
+    notice = Notice.query.get(notice_id)
+    if not notice:
+        return jsonify({"error": "Notice not found"}), 404
+
+    notice.title = title
+    notice.content = content
+    db.session.commit()
+    return jsonify({"message": "Notice updated successfully"}), 200
