@@ -39,3 +39,14 @@ class Notice(db.Model):
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     author = db.Column(db.String(50), nullable=False, default='Admin')
+
+class Mess(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    day = db.Column(db.String(20), nullable=False)  # Monday, Tuesday, etc.
+    breakfast = db.Column(db.String(255), nullable=False, default='')
+    lunch = db.Column(db.String(255), nullable=False, default='')
+    snacks = db.Column(db.String(255), nullable=False, default='')
+    dinner = db.Column(db.String(255), nullable=False, default='')
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    __table_args__ = (db.UniqueConstraint('day', name='unique_day'),)

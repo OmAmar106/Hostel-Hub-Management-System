@@ -199,17 +199,19 @@ export default function ProfileAvatar() {
               </div>
 
               {/* new room number field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                  Room No
-                </label>
-                <input
-                  type="text"
-                  value={roomNo}
-                  onChange={(e) => setRoomNo(e.target.value)}
-                  className="w-full border rounded px-3 py-2 dark:bg-slate-700 dark:text-white"
-                />
-              </div>
+              {user?.role === "student" && (
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                    Room No
+                    </label>
+                    <input
+                    type="text"
+                    value={roomNo}
+                    onChange={(e) => setRoomNo(e.target.value)}
+                    className="w-full border rounded px-3 py-2 dark:bg-slate-700 dark:text-white"
+                    />
+                </div>
+                )}
             </div>
 
             <div className="flex justify-end gap-2 mt-4">

@@ -11,7 +11,7 @@ workers_bp = Blueprint("workers", __name__, url_prefix="/api/workers")
 @jwt_required()
 def get_workers():
     claims = get_jwt()
-    if claims.get("role") != "admin":
+    if claims.get("role") not in ["admin","worker"]:
         return jsonify({"error": "Admins only"}), 200
 
     workers = (

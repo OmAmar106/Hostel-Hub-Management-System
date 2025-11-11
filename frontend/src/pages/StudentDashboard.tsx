@@ -7,8 +7,9 @@ import { IssueCard } from '@/components/IssueCard';
 import { IssueModal } from '@/components/IssueModal';
 import { IssueForm } from '@/components/IssueForm';
 import { NoticeBoard } from '@/components/NoticeBoard';
+import { MessBoard } from '@/components/MessBoard';
 import { Issue } from '@/contexts/DataContext';
-import { Home, PlusCircle, Megaphone, LogOut, User } from 'lucide-react';
+import { Home, PlusCircle, Megaphone, LogOut, User, UtensilsCrossed } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import ProfileAvatar from "@/components/ui/ProfileAvatar";
 import {
@@ -26,8 +27,8 @@ import ThemeToggle from "@/components/ui/ThemeToggle"; // ✅ Import the theme t
 const StudentDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { issues, notices, addIssue, editIssue, deleteIssue } = useData();
-  const [activeTab, setActiveTab] = useState<"all" | "my" | "notices">("all");
+  const { issues, notices, messItems, addIssue, deleteIssue } = useData();
+  const [activeTab, setActiveTab] = useState<"all" | "my" | "notices" | "mess">("all");
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [formModalOpen, setFormModalOpen] = useState(false);
@@ -103,6 +104,7 @@ const StudentDashboard = () => {
             Student Dashboard
           </h1>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <ProfileAvatar />
           </div>
         </div>
@@ -136,6 +138,14 @@ const StudentDashboard = () => {
             >
               <Megaphone className="h-4 w-4" />
               Notice Board
+            </Button>
+            <Button
+              variant={activeTab === "mess" ? "default" : "ghost"}
+              onClick={() => setActiveTab("mess")}
+              className="gap-2"
+            >
+              <UtensilsCrossed className="h-4 w-4" />
+              Mess Menu
             </Button>
           </div>
         </div>
@@ -198,6 +208,9 @@ const StudentDashboard = () => {
 
         {/* 🔹 Notices */}
         {activeTab === "notices" && <NoticeBoard notices={notices} />}
+
+        {/* 🔹 Mess Menu */}
+        {activeTab === "mess" && <MessBoard messItems={messItems} />}
       </main>
 
       {/* Modals */}

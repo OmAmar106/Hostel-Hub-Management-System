@@ -98,7 +98,7 @@ def update_issue(issue_id):
     return jsonify({"message": "Issue updated", "id": issue.id}), 200
 
 @issues_bp.post("/issues/<int:issue_id>/status")
-@role_required("admin")
+@role_required("worker")
 def update_status(issue_id):
     data = request.get_json() or {}
     new_status = data.get("status")
@@ -157,7 +157,7 @@ def assign_issue(issue_id):
     }), 201
 
 @issues_bp.get("/my-issues")
-@role_required("repairer")
+@role_required("worker")
 def get_my_issues():
     claims = get_jwt()
     worker_email = claims.get("email")

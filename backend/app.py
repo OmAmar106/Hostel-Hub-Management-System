@@ -10,12 +10,13 @@ from notice import notices_bp
 from dotenv import load_dotenv
 import os
 from workers import workers_bp
+from mess import mess_bp
 from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True, expose_headers=["Authorization"])
+CORS(app, supports_credentials=True, expose_headers=["Authorization"],origins=["http://localhost:8080"])
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(basedir, "database.db")
@@ -33,6 +34,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(workers_bp)
 app.register_blueprint(issues_bp)
 app.register_blueprint(notices_bp)
+app.register_blueprint(mess_bp)
 
 @app.get("/api/categories")
 def get_categories():
