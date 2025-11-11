@@ -13,6 +13,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import RepairerDashboard from "./pages/RepairerDashboard";
 import NotFound from "./pages/NotFound";
 import { useEffect, useState } from "react";
+import ProfileAvatar from "@/components/ui/ProfileAvatar";
+import Header from "@/components/ui/Header";
 
 const queryClient = new QueryClient();
 
@@ -65,22 +67,23 @@ const App = () => {
         <AuthProvider>
           <DataProvider>
             <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <Routes>
-                <Route path="/" element={<Landing />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
-                <Route
-                  path="/dashboard"
-                  element={
-                    <ProtectedRoute allowedRoles={["student", "admin", "repairer"]}>
-                      <DashboardRouter />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <Header />
+                <Toaster />
+                <Sonner />
+                <Routes>
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <ProtectedRoute allowedRoles={["student", "admin", "repairer"]}>
+                        <DashboardRouter />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
             </TooltipProvider>
           </DataProvider>
         </AuthProvider>
