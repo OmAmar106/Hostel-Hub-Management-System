@@ -9,6 +9,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default="student")
+    room_no = db.Column(db.String(20), nullable=True)  
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 class WorkerInfo(db.Model):
@@ -27,8 +28,10 @@ class Issue(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     upvotes = db.Column(db.Integer, nullable=False, default=0)
     voters = db.Column(db.Text, nullable=True, default='')
-    def __repr__(self):
-        return f'<Issue {self.id}: {self.title}>'
+    assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    assigned_at = db.Column(db.DateTime, nullable=True)
+    assignee = db.relationship("User", backref=db.backref("assigned_issues", lazy=True))
+
 
 class Notice(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -36,5 +39,3 @@ class Notice(db.Model):
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     author = db.Column(db.String(50), nullable=False, default='Admin')
-    def __repr__(self):
-        return f'<Notice {self.id}: {self.title}>'
