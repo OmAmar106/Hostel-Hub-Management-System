@@ -98,9 +98,11 @@ def me():
         "roomNo":user.room_no
     })
 
+@auth_bp.route("/update-profile", methods=["PUT"])
+@jwt_required()
 def update_profile():
-    user_id = get_jwt_identity()
-    data = request.get_json()
+    user_id = int(get_jwt_identity())
+    data = request.get_json(silent=True) or {}
 
     if not data:
         return jsonify({"msg": "Missing JSON body"}), 400
@@ -112,9 +114,18 @@ def update_profile():
     if not user:
         return jsonify({"msg": "User not found"}), 404
 
+    # update fields (adjust if your model uses full_name)
     if name:
-        user.full_name = name
+        if hasattr(user, "full_name"):
+            user.full_name = name
+        else:
+            user.name = name
+
     if email:
+        # optional: uniqueness check
+        existing = User.query.filter(User.email == email, User.id != user_id).first()
+        if existing:
+            return jsonify({"msg": "Email already in use"}), 400
         user.email = email
 
     db.session.commit()
