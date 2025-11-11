@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+<<<<<<< HEAD
 import { Input } from "@/components/ui/input";
+=======
+>>>>>>> a568824c82c5740e79451ff3b26da479704d421d
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
 import { IssueCard } from "@/components/IssueCard";
@@ -9,6 +12,7 @@ import { IssueModal } from "@/components/IssueModal";
 import { IssueForm } from "@/components/IssueForm";
 import { NoticeBoard } from "@/components/NoticeBoard";
 import { Issue } from "@/contexts/DataContext";
+<<<<<<< HEAD
 import {
   Home,
   PlusCircle,
@@ -22,6 +26,10 @@ import {
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+=======
+import { Home, PlusCircle, Megaphone, LogOut, User } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+>>>>>>> a568824c82c5740e79451ff3b26da479704d421d
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +40,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+<<<<<<< HEAD
+=======
+import ThemeToggle from "@/components/ui/ThemeToggle"; // ✅ Import the theme toggle
+>>>>>>> a568824c82c5740e79451ff3b26da479704d421d
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -46,6 +58,7 @@ const StudentDashboard = () => {
   const [issueToDelete, setIssueToDelete] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
+<<<<<<< HEAD
   // Filtered data
   const myIssues = issues.filter((issue) => issue.createdBy === user?.name);
   const filteredIssues = issues.filter((issue) =>
@@ -55,17 +68,24 @@ const StudentDashboard = () => {
   const total = issues.length;
   const pending = issues.filter((i) => i.status === "Pending").length;
   const resolved = issues.filter((i) => i.status === "Resolved").length;
+=======
+  // 🔹 Filter issues belonging to current user
+  const myIssues = issues.filter((issue) => issue.createdBy === user?.name);
+>>>>>>> a568824c82c5740e79451ff3b26da479704d421d
 
+  // 🔹 Logout handler
   const handleLogout = () => {
     logout();
     navigate("/");
   };
 
+  // 🔹 View issue details
   const handleView = (issue: Issue) => {
     setSelectedIssue(issue);
     setViewModalOpen(true);
   };
 
+  // 🔹 Edit issue
   const handleEdit = (issue: Issue) => {
     if (issue.status === "Resolved") {
       toast({
@@ -79,6 +99,7 @@ const StudentDashboard = () => {
     setFormModalOpen(true);
   };
 
+  // 🔹 Delete confirmation
   const handleDeleteClick = (id: number) => {
     setIssueToDelete(id);
     setDeleteDialogOpen(true);
@@ -86,6 +107,10 @@ const StudentDashboard = () => {
 
   const confirmDelete = async () => {
     if (!issueToDelete) return;
+<<<<<<< HEAD
+=======
+
+>>>>>>> a568824c82c5740e79451ff3b26da479704d421d
     const success = await deleteIssue(issueToDelete);
     toast({
       title: success ? "Issue deleted" : "Error",
@@ -94,26 +119,50 @@ const StudentDashboard = () => {
         : "Failed to delete issue",
       variant: success ? "default" : "destructive",
     });
+<<<<<<< HEAD
+=======
+
+>>>>>>> a568824c82c5740e79451ff3b26da479704d421d
     setDeleteDialogOpen(false);
     setIssueToDelete(null);
   };
 
+  // 🔹 Open new issue form
   const handleNewIssue = () => {
     setEditingIssue(null);
     setFormModalOpen(true);
   };
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary text-foreground">
       {/* Header */}
       <header className="border-b bg-card shadow-md">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold">Student Dashboard</h1>
+=======
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+      {/* Header */}
+      <header className="border-b bg-white dark:bg-gray-800 dark:border-gray-700">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            Student Dashboard
+          </h1>
+>>>>>>> a568824c82c5740e79451ff3b26da479704d421d
           <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
-              {user?.name} • Room {user?.roomNo}
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              {user?.name} • Room {user?.roomNo || "N/A"}
             </span>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
+
+            {/* ✅ Dark / Light Mode Toggle Button */}
+            <ThemeToggle />
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+            >
               <LogOut className="h-4 w-4 mr-2" />
               Logout
             </Button>
@@ -121,6 +170,7 @@ const StudentDashboard = () => {
         </div>
       </header>
 
+<<<<<<< HEAD
       {/* Stats Overview */}
       <section className="container mx-auto px-4 mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
@@ -146,6 +196,10 @@ const StudentDashboard = () => {
 
       {/* Navigation Tabs */}
       <nav className="border-b mt-6 bg-card">
+=======
+      {/* Navigation */}
+      <nav className="border-b bg-white dark:bg-gray-800 dark:border-gray-700">
+>>>>>>> a568824c82c5740e79451ff3b26da479704d421d
         <div className="container mx-auto px-4">
           <div className="flex gap-2 overflow-x-auto py-2">
             <Button
@@ -177,6 +231,7 @@ const StudentDashboard = () => {
       </nav>
 
       {/* Main Content */}
+<<<<<<< HEAD
       <main className="container mx-auto px-4 py-8 space-y-8">
         {/* Search & Add */}
         {activeTab !== "notices" && (
@@ -189,6 +244,20 @@ const StudentDashboard = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8"
               />
+=======
+      <main className="container mx-auto px-4 py-8">
+        {/* 🔹 All Issues */}
+        {activeTab === "all" && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                All Issues
+              </h2>
+              <Button onClick={handleNewIssue}>
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Raise New Issue
+              </Button>
+>>>>>>> a568824c82c5740e79451ff3b26da479704d421d
             </div>
             <Button onClick={handleNewIssue}>
               <PlusCircle className="h-4 w-4 mr-2" />
@@ -221,6 +290,7 @@ const StudentDashboard = () => {
           </motion.div>
         )}
 
+<<<<<<< HEAD
         {/* My Issues */}
         {activeTab === "my" && (
           <motion.div
@@ -248,6 +318,42 @@ const StudentDashboard = () => {
         )}
 
         {/* Notices */}
+=======
+        {/* 🔹 My Issues */}
+        {activeTab === "my" && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                My Issues
+              </h2>
+              <Button onClick={handleNewIssue}>
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Raise New Issue
+              </Button>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {myIssues.length === 0 ? (
+                <div className="col-span-full text-center py-12 text-gray-500 dark:text-gray-400">
+                  You haven't raised any issues yet
+                </div>
+              ) : (
+                myIssues.map((issue) => (
+                  <IssueCard
+                    key={issue.id}
+                    issue={issue}
+                    onView={handleView}
+                    onEdit={handleEdit}
+                    onDelete={handleDeleteClick}
+                    showActions={true}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 🔹 Notices */}
+>>>>>>> a568824c82c5740e79451ff3b26da479704d421d
         {activeTab === "notices" && <NoticeBoard notices={notices} />}
       </main>
 
