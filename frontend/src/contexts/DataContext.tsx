@@ -123,7 +123,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setRepairers(repairerList);
     } catch (err) {
       console.error("fetchAllData error:", err);
-      toast.error("Failed to fetch data from server");
+      // toast.error("Failed to fetch data from server");
     } finally {
       setLoading(false);
     }
