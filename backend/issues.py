@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
-from model import db, Issue
+from model import db, Issue, User
+import datetime
 
 issues_bp = Blueprint("issues", __name__, url_prefix="/api")
 
@@ -29,8 +30,14 @@ def get_issues():
             "createdBy": i.created_by,
             "createdAt": i.created_at.isoformat(),
             "upvotes": i.upvotes,
-            "voters": i.voters.split(",") if i.voters else []
-        } for i in issues
+            "voters": i.voters.split(",") if i.voters else [],
+            "assignedTo": i.assigned_to,
+            "assignedWorker": i.assignee.full_name if i.assignee else None,
+            "assignedAt": i.assigned_at.isoformat() if i.assigned_at else None,
+            "assignee": i.assigned_to,
+            "assigneeName": i.assignee.full_name if i.assignee else None,
+        }
+        for i in issues
     ])
 
 @issues_bp.post("/issues")
@@ -44,7 +51,7 @@ def create_issue():
         title=data["title"],
         description=data["description"],
         room_number=data["roomNumber"],
-        created_by=claims.get("email")
+        created_by=claims.get("full_name")
     )
     db.session.add(issue)
     db.session.commit()
@@ -64,24 +71,36 @@ def update_status(issue_id):
 
 @issues_bp.post("/issues/<int:issue_id>/upvote")
 @role_required("student", "admin")
-def upvote(issue_id):
+def toggle_upvote(issue_id):
     claims = get_jwt()
     email = claims.get("email")
     issue = Issue.query.get_or_404(issue_id)
+
     voters = set(filter(None, (issue.voters or "").split(",")))
+
     if email in voters:
-        return jsonify({"error": "Already voted"}), 409
-    voters.add(email)
+        voters.remove(email)
+        message = "Upvote removed"
+    else:
+        voters.add(email)
+        message = "Upvoted successfully"
+
     issue.voters = ",".join(voters)
     issue.upvotes = len(voters)
     db.session.commit()
-    return jsonify({"upvotes": issue.upvotes})
+
+    return jsonify({
+        "message": message,
+        "upvotes": issue.upvotes,
+        "voters": list(voters)
+    })
 
 @issues_bp.post("/issues/<int:issue_id>/assign")
 @role_required("admin")
 def assign_issue(issue_id):
     data = request.get_json() or {}
-    assignee_id = data.get("assignee")
+    assignee_id = data.get("worker_id")
+    # print(assignee_id)
     if not assignee_id:
         return jsonify({"error": "Missing assignee_id"}), 400
     issue = Issue.query.get_or_404(issue_id)
@@ -95,7 +114,7 @@ def assign_issue(issue_id):
         "message": "Issue assigned successfully",
         "assigned_to": assignee.full_name,
         "assigned_at": issue.assigned_at.isoformat()
-    }),201
+    }), 201
 
 @issues_bp.get("/my-issues")
 @role_required("repairer")
@@ -106,7 +125,7 @@ def get_my_issues():
     if not worker:
         return jsonify([])
 
-    issues = Issue.query.filter_by(assignee=worker.id).order_by(Issue.created_at.desc()).all()
+    issues = Issue.query.filter_by(assigned_to=worker.id).order_by(Issue.created_at.desc()).all()
     return jsonify([
         {
             "id": i.id,
@@ -121,3 +140,12 @@ def get_my_issues():
             "assignedTo": i.assigned_to,
         } for i in issues
     ])
+
+@issues_bp.post("/issues/<int:issue_id>/unassign")
+@role_required("admin")
+def unassign_issue(issue_id):
+    issue = Issue.query.get_or_404(int(issue_id))
+    issue.assigned_to = None
+    issue.assigned_at = None
+    db.session.commit()
+    return jsonify({"message": "Worker unassigned successfully"}), 200

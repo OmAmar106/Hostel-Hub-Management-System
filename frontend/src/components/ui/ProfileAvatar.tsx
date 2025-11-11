@@ -6,8 +6,24 @@ export default function ProfileAvatar() {
   const { user, logout, refreshProfile } = useAuth();
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+
+  // local form state (sync whenever the user object changes or modal opens)
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
+  useEffect(() => {
+    setName(user?.name || "");
+    setEmail(user?.email || "");
+  }, [user?.name, user?.email]);
+
+  // ensure modal inputs show latest values when opened
+  useEffect(() => {
+    if (editOpen) {
+      setName(user?.name || "");
+      setEmail(user?.email || "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editOpen]);
+
   const [saving, setSaving] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -23,8 +39,14 @@ export default function ProfileAvatar() {
     ? user.name.split(" ").map((s) => s[0]).slice(0, 2).join("").toUpperCase()
     : "?";
 
+  const hasChanged = () => {
+    const oldName = (user?.name ?? "").trim();
+    const oldEmail = (user?.email ?? "").trim();
+    return name.trim() !== oldName || email.trim() !== oldEmail;
+  };
+
   const handleSave = async () => {
-    if (!name || !email) {
+    if (!name.trim() || !email.trim()) {
       toast({
         title: "Missing information",
         description: "Name and email cannot be empty.",
@@ -33,34 +55,60 @@ export default function ProfileAvatar() {
       return;
     }
 
+    if (!hasChanged()) {
+      toast({
+        title: "No changes",
+        description: "You haven't changed anything.",
+        variant: "default",
+      });
+      setEditOpen(false);
+      return;
+    }
+
     setSaving(true);
     try {
-      const token = localStorage.getItem("access_token");
-      const res = await fetch("http://localhost:5000/auth/update-profile", {
+      // Use relative path so dev proxy or same-origin works reliably
+      const res = await fetch("/auth/update-profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          // Authorization header is added by backend if needed via JWT from localStorage (optional)
+          Authorization: localStorage.getItem("access_token")
+            ? `Bearer ${localStorage.getItem("access_token")}`
+            : "",
         },
-        body: JSON.stringify({ name, email }),
+        body: JSON.stringify({ name: name.trim(), email: email.trim() }),
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || data.msg || "Failed to update profile");
+        // Read body once then parse if possible
+        const bodyText = await res.text().catch(() => "");
+        let errMsg = `Failed to update profile (${res.status})`;
+        if (bodyText) {
+          try {
+            const parsed = JSON.parse(bodyText);
+            errMsg = parsed?.message || parsed?.msg || JSON.stringify(parsed) || bodyText;
+          } catch {
+            errMsg = bodyText;
+          }
+        }
+        throw new Error(errMsg);
       }
 
+      // Success -> refresh profile from backend (no full-page reload)
       await refreshProfile();
 
       toast({
         title: "Profile updated",
         description: "Your details have been successfully updated.",
+        variant: "default",
       });
       setEditOpen(false);
     } catch (err: any) {
+      console.error("update-profile error:", err);
       toast({
         title: "Update failed",
-        description: err.message || "Could not update profile.",
+        description: err?.message || "Could not update profile.",
         variant: "destructive",
       });
     } finally {
@@ -81,7 +129,9 @@ export default function ProfileAvatar() {
       {open && (
         <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 shadow-lg rounded py-2 z-50">
           <div className="px-3 py-2 border-b dark:border-slate-700">
-            <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user?.name}</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+              {user?.name}
+            </div>
             <div className="text-xs text-gray-500 dark:text-gray-300 truncate">{user?.email}</div>
           </div>
 
@@ -152,7 +202,7 @@ export default function ProfileAvatar() {
               <button
                 onClick={handleSave}
                 className="px-3 py-1 rounded bg-indigo-600 text-white disabled:opacity-50"
-                disabled={saving}
+                disabled={saving || !hasChanged()}
               >
                 {saving ? "Saving..." : "Save"}
               </button>
