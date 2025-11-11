@@ -22,6 +22,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { IssueModal } from "@/components/IssueModal";
+import ThemeToggle from "@/components/ui/ThemeToggle"; // ✅ Added
 
 const API_BASE = "http://localhost:5000";
 
@@ -91,9 +92,7 @@ const RepairerDashboard = () => {
       if (!res.ok) throw new Error("Failed to update status");
 
       setIssues((prev) =>
-        prev.map((i) =>
-          i.id === issueId ? { ...i, status: newStatus } : i
-        )
+        prev.map((i) => (i.id === issueId ? { ...i, status: newStatus } : i))
       );
 
       toast({
@@ -108,27 +107,40 @@ const RepairerDashboard = () => {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
-
+  // 🔹 View issue details
   const handleView = (issue: Issue) => {
     setSelectedIssue(issue);
     setViewModalOpen(true);
   };
 
+  // 🔹 Logout
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
       {/* Header */}
-      <header className="border-b bg-card">
+      <header className="border-b bg-white dark:bg-gray-800 dark:border-gray-700">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-foreground">Repairer Dashboard</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            Repairer Dashboard
+          </h1>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-gray-700 dark:text-gray-300">
               {user?.name} (Repairer)
             </span>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
+
+            {/* ✅ Dark/Light Mode Toggle */}
+            <ThemeToggle />
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+            >
               <LogOut className="h-4 w-4 mr-2" />
               Logout
             </Button>
@@ -141,13 +153,16 @@ const RepairerDashboard = () => {
         <div className="space-y-6">
           <div className="flex items-center gap-2">
             <Wrench className="h-6 w-6 text-primary" />
-            <h2 className="text-2xl font-semibold text-foreground">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
               Assigned Issues
             </h2>
           </div>
 
-          <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
-            <TabsList>
+          <Tabs
+            value={statusFilter}
+            onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}
+          >
+            <TabsList className="bg-gray-100 dark:bg-gray-800 rounded-md">
               <TabsTrigger value="all">All ({issues.length})</TabsTrigger>
               <TabsTrigger value="Pending">
                 Pending ({issues.filter((i) => i.status === "Pending").length})
@@ -161,11 +176,11 @@ const RepairerDashboard = () => {
             </TabsList>
 
             <TabsContent value={statusFilter} className="mt-6">
-              <Card>
+              <Card className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     {filteredIssues.length === 0 ? (
-                      <div className="py-12 text-center text-muted-foreground">
+                      <div className="py-12 text-center text-gray-600 dark:text-gray-400">
                         No issues assigned to you
                       </div>
                     ) : (
