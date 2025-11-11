@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
-from model import db, Issue
+from model import db, Issue, User
+import datetime
 
 issues_bp = Blueprint("issues", __name__, url_prefix="/api")
 
@@ -29,8 +30,12 @@ def get_issues():
             "createdBy": i.created_by,
             "createdAt": i.created_at.isoformat(),
             "upvotes": i.upvotes,
-            "voters": i.voters.split(",") if i.voters else []
-        } for i in issues
+            "voters": i.voters.split(",") if i.voters else [],
+            "assignedTo": i.assigned_to,
+            "assignedWorker": i.assignee.full_name if i.assignee else None,
+            "assignedAt": i.assigned_at.isoformat() if i.assigned_at else None
+        }
+        for i in issues
     ])
 
 @issues_bp.post("/issues")
@@ -81,7 +86,8 @@ def upvote(issue_id):
 @role_required("admin")
 def assign_issue(issue_id):
     data = request.get_json() or {}
-    assignee_id = data.get("assignee")
+    assignee_id = data.get("worker_id")
+    # print(assignee_id)
     if not assignee_id:
         return jsonify({"error": "Missing assignee_id"}), 400
     issue = Issue.query.get_or_404(issue_id)
