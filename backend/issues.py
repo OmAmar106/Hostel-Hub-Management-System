@@ -49,7 +49,7 @@ def create_issue():
         title=data["title"],
         description=data["description"],
         room_number=data["roomNumber"],
-        created_by=claims.get("email")
+        created_by=claims.get("full_name")
     )
     db.session.add(issue)
     db.session.commit()
@@ -67,20 +67,35 @@ def update_status(issue_id):
     db.session.commit()
     return jsonify({"message": "Status updated"})
 
+# ✅ Updated toggle upvote route
 @issues_bp.post("/issues/<int:issue_id>/upvote")
 @role_required("student", "admin")
-def upvote(issue_id):
+def toggle_upvote(issue_id):
     claims = get_jwt()
     email = claims.get("email")
     issue = Issue.query.get_or_404(issue_id)
+
+    # Convert stored comma-separated voters string into a set
     voters = set(filter(None, (issue.voters or "").split(",")))
+
+    # Toggle behavior: remove if exists, add otherwise
     if email in voters:
-        return jsonify({"error": "Already voted"}), 409
-    voters.add(email)
+        voters.remove(email)
+        message = "Upvote removed"
+    else:
+        voters.add(email)
+        message = "Upvoted successfully"
+
+    # Update database
     issue.voters = ",".join(voters)
     issue.upvotes = len(voters)
     db.session.commit()
-    return jsonify({"upvotes": issue.upvotes})
+
+    return jsonify({
+        "message": message,
+        "upvotes": issue.upvotes,
+        "voters": list(voters)
+    })
 
 @issues_bp.post("/issues/<int:issue_id>/assign")
 @role_required("admin")
@@ -101,7 +116,7 @@ def assign_issue(issue_id):
         "message": "Issue assigned successfully",
         "assigned_to": assignee.full_name,
         "assigned_at": issue.assigned_at.isoformat()
-    }),201
+    }), 201
 
 @issues_bp.get("/my-issues")
 @role_required("repairer")
