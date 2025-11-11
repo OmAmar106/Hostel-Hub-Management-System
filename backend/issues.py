@@ -118,7 +118,7 @@ def assign_issue(issue_id):
     }), 201
 
 @issues_bp.get("/my-issues")
-@role_required("repairer")
+@role_required("worker")
 def get_my_issues():
     claims = get_jwt()
     worker_email = claims.get("email")

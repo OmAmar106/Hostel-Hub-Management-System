@@ -71,7 +71,6 @@ const RepairerDashboard = () => {
     fetchMyIssues();
   }, []);
 
-  // 🔹 Filter by status
   const filteredIssues =
     statusFilter === "all"
       ? issues
@@ -125,11 +124,11 @@ const RepairerDashboard = () => {
       <header className="border-b bg-white dark:bg-gray-800 dark:border-gray-700">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Repairer Dashboard
+            Worker Dashboard
           </h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-700 dark:text-gray-300">
-              {user?.name} (Repairer)
+              {user?.name} (Worker)
             </span>
 
             <ThemeToggle />

@@ -97,8 +97,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIssues(issuesData);
       setCategories(categoriesData);
       setNotices(noticesData);
-
+      console.log(workersData)
       const repairerList = workersData.filter((w: any) => w.role === "worker");
+      // console.log(repairerList)
       setRepairers(repairerList);
     } catch (err) {
       console.error("fetchAllData error:", err);
