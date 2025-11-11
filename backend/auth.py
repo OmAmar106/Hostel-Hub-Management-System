@@ -17,7 +17,6 @@ def signup():
     data = request.get_json() or {}
     name, email, pwd = data.get("full_name"), data.get("email"), data.get("password")
     role = (data.get("role") or "student").lower()
-    role = "admin"
 
     if not name or not email or not pwd:
         return jsonify({"error": "Missing fields"}), 400
