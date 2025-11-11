@@ -3,7 +3,7 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
-from model import db
+from model import db,User
 from auth import auth_bp
 from issues import issues_bp
 from notice import notices_bp
@@ -48,4 +48,15 @@ def get_categories():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
+        admin = User.query.filter_by(role="admin").first()
+        if not admin:
+            new_admin = User(
+                full_name="Admin",
+                email="admin@hostel.com",
+                password_hash="admin123",
+                role="admin"
+            )
+            db.session.add(new_admin)
+            db.session.commit()
+
     app.run(debug=True, port=5000)
