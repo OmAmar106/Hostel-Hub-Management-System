@@ -44,6 +44,8 @@ interface DataContextType {
   addIssue: (issue: any) => Promise<void>;
   addNotice: (notice: any) => Promise<void>;
   updateIssue: (issueId: number, updates: Partial<Issue>) => Promise<void>;
+  editIssue: (issueId: number, updates: Partial<Issue>) => Promise<boolean>;
+  updateNotice: (noticeId: number, updates: Partial<Notice>) => Promise<boolean>;
   deleteIssue: (issueId: number) => Promise<boolean>;
   deleteNotice: (noticeId: number) => Promise<boolean>;
   upvoteIssue: (issueId: number) => Promise<void>;
@@ -123,7 +125,31 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       toast.error("Failed to report issue");
     }
   };
-
+  const editIssue = async (issueId: number, updates: Partial<Issue>) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/issues/${issueId}`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({
+        title: updates.title,
+        description: updates.description,
+        // ensure you send roomNumber as room_number if backend expects that
+        room_number: (updates as any).roomNumber ?? (updates as any).room_number,
+      }),
+    });
+    if (!res.ok) {
+      let json = null;
+      try { json = await res.json(); } catch {}
+      console.error("editIssue failed:", res.status, json);
+      return false;
+    }
+    await fetchAllData();
+    return true;
+  } catch (err) {
+    console.error("editIssue exception:", err);
+    return false;
+  }
+};
   const updateIssue = async (issueId: number, updates: Partial<Issue>) => {
     try {
       const res = await fetch(`${API_BASE}/api/issues/${issueId}/status`, {
@@ -222,6 +248,30 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // inside DataProvider (add below addNotice)
+  // add to DataContext.tsx inside DataProvider
+const updateNotice = async (noticeId: number, updates: Partial<Notice>) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/notices/${noticeId}`, {
+      method: "PUT", // or "PATCH" if your backend expects PATCH
+      headers,
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) {
+      let json = null;
+      try { json = await res.json(); } catch {}
+      console.error("updateNotice failed:", res.status, json);
+      return false;
+    }
+    await fetchAllData(); // refresh local state from backend
+    return true;
+  } catch (err) {
+    console.error("updateNotice exception:", err);
+    return false;
+  }
+};
+
+
   const deleteNotice = async (noticeId: number) => {
     try {
       const res = await fetch(`${API_BASE}/api/notices/${noticeId}`, {
@@ -264,7 +314,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         loading,
         addIssue,
         addNotice,
+        updateNotice, 
         updateIssue,
+        editIssue,
         deleteIssue,
         deleteNotice,
         upvoteIssue,

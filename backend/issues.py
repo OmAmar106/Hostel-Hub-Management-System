@@ -57,6 +57,45 @@ def create_issue():
     db.session.add(issue)
     db.session.commit()
     return jsonify({"message": "Issue created", "id": issue.id}), 201
+@issues_bp.route("/issues/<int:issue_id>", methods=["PUT"])
+@jwt_required()
+def update_issue(issue_id):
+    data = request.get_json() or {}
+    title = data.get("title")
+    description = data.get("description")
+    room_number = data.get("room_number") or data.get("roomNumber")
+    if title is None or description is None or room_number is None:
+        return jsonify({"error": "Missing title, description or room_number"}), 400
+
+    issue = Issue.query.get(issue_id)
+    if not issue:
+        return jsonify({"error": "Issue not found"}), 404
+
+    # Allow update if requester is the creator or admin
+    claims = get_jwt()
+    req_id = int(get_jwt_identity())  
+
+    req_id = User.query.filter_by(id=req_id).first().full_name
+    
+    is_owner = False
+    if isinstance(req_id, str):
+        is_owner = req_id == issue.created_by
+    else:
+        is_owner = str(req_id) == str(issue.created_by)
+
+    is_admin = claims.get("role") == "admin"
+
+    if not (is_owner or is_admin):
+        return jsonify({"error": "Forbidden"}), 403
+
+
+    issue.title = title
+    issue.description = description
+    issue.room_number = room_number
+
+    db.session.commit()
+
+    return jsonify({"message": "Issue updated", "id": issue.id}), 200
 
 @issues_bp.post("/issues/<int:issue_id>/status")
 @role_required("admin")

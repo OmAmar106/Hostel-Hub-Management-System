@@ -55,8 +55,7 @@ const AdminDashboard = () => {
   const [workers, setWorkers] = useState<any[]>([]);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { issues, notices, addNotice, updateIssue, deleteNotice } = useData();
-
+  const { issues, notices, addNotice, updateIssue, deleteNotice, updateNotice } = useData();
   const [activeTab, setActiveTab] = useState<"issues" | "notices" | "workers">("issues");
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -561,7 +560,10 @@ const AdminDashboard = () => {
         open={noticeFormOpen}
         onOpenChange={setNoticeFormOpen}
         addNotice={addNotice}
-      />
+        updateNotice={updateNotice}
+        editingNotice={editingNotice}
+        />
+
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
