@@ -132,7 +132,6 @@ const RepairerDashboard = () => {
               {user?.name} (Repairer)
             </span>
 
-            {/* ✅ Dark/Light Mode Toggle */}
             <ThemeToggle />
 
             <Button
