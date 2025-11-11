@@ -28,11 +28,13 @@ import BusTimetableView from "@/components/BusTimetableView"; // ✅ Import Bus 
 const StudentDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { issues, notices, messItems, addIssue, deleteIssue } = useData();
   const [activeTab, setActiveTab] = useState<"all" | "my" | "notices" | "mess" | "bus">("all");
+  const { issues, notices, messItems, addIssue, deleteIssue, editIssue } = useData();
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [formModalOpen, setFormModalOpen] = useState(false);
+  const [issueFormOpen, setIssueFormOpen] = useState(false);
+  const [issueToEdit, setIssueToEdit] = useState<Issue | null>(null);
   const [editingIssue, setEditingIssue] = useState<Issue | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [issueToDelete, setIssueToDelete] = useState<number | null>(null);
@@ -226,6 +228,7 @@ const StudentDashboard = () => {
         onOpenChange={setFormModalOpen}
         issue={editingIssue}
         addIssue={addIssue}
+        editIssue={editIssue}
       />
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
