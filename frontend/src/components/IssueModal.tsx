@@ -42,7 +42,6 @@ export const IssueModal = ({ issue, open, onOpenChange }: IssueModalProps) => {
               <p className="text-sm font-medium text-muted-foreground">Room</p>
               <p className="text-foreground">{issue.roomNumber}</p>
             </div>
-            {/* Category not available */}
             <div>
               <p className="text-sm font-medium text-muted-foreground">Status</p>
               <StatusBadge status={issue.status} />
@@ -56,7 +55,6 @@ export const IssueModal = ({ issue, open, onOpenChange }: IssueModalProps) => {
             <p className="text-sm font-medium text-muted-foreground mb-2">Description</p>
             <p className="text-foreground whitespace-pre-wrap">{issue.description}</p>
           </div>
-          {/* Attachments and resolvedAt not present in current Issue type */}
         </div>
       </DialogContent>
     </Dialog>

@@ -88,7 +88,6 @@ const App = () => {
                   }
                 />
 
-                {/* ✅ Added Bus Timetable routes */}
                 <Route path="/bus-timetable" element={<BusTimetableView />} />
                 <Route
                   path="/admin/bus-timetable"

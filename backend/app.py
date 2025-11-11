@@ -12,8 +12,6 @@ from workers import workers_bp
 from mess import mess_bp
 from werkzeug.security import generate_password_hash, check_password_hash
 
-
-# ✅ Added import for bus timetable
 from bus_timetable import bus_bp
 
 
@@ -40,7 +38,6 @@ app.register_blueprint(issues_bp)
 app.register_blueprint(notices_bp)
 app.register_blueprint(mess_bp)
 
-# ✅ Register the bus timetable endpoints
 app.register_blueprint(bus_bp)
 
 

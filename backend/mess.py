@@ -41,19 +41,46 @@ def get_mess_schedule():
 @mess_bp.post("/mess")
 @role_required("admin")
 def create_mess_item():
-    """Create a new mess schedule item - admin only"""
     data = request.get_json() or {}
-    
-    if not data.get("day"):
+
+    day = data.get("day")
+    if not day:
         return jsonify({"error": "Day is required"}), 400
-    
-    # Check if day already exists
-    if Mess.query.filter_by(day=data.get("day")).first():
-        return jsonify({"error": "Day already exists in schedule"}), 409
-    
+
     try:
+        existing = Mess.query.filter_by(day=day).first()
+
+        if existing:
+            if "breakfast" in data:
+                existing.breakfast = data.get("breakfast", "")
+            if "lunch" in data:
+                existing.lunch = data.get("lunch", "")
+            if "snacks" in data:
+                existing.snacks = data.get("snacks", "")
+            if "dinner" in data:
+                existing.dinner = data.get("dinner", "")
+
+            try:
+                existing.updated_at = datetime.datetime.utcnow()
+            except Exception:
+                pass
+
+            db.session.commit()
+
+            return jsonify({
+                "message": "Mess item updated",
+                "id": existing.id,
+                "day": existing.day,
+                "breakfast": existing.breakfast,
+                "lunch": existing.lunch,
+                "snacks": existing.snacks,
+                "dinner": existing.dinner,
+                "createdAt": existing.created_at.isoformat(),
+                "updatedAt": getattr(existing, "updated_at", existing.created_at).isoformat(),
+            }), 200
+
         mess_item = Mess(
-            day=data.get("day"),
+            day=day,
             breakfast=data.get("breakfast", ""),
             lunch=data.get("lunch", ""),
             snacks=data.get("snacks", ""),
@@ -61,8 +88,9 @@ def create_mess_item():
         )
         db.session.add(mess_item)
         db.session.commit()
-        
+
         return jsonify({
+            "message": "Mess item created",
             "id": mess_item.id,
             "day": mess_item.day,
             "breakfast": mess_item.breakfast,
@@ -70,11 +98,14 @@ def create_mess_item():
             "snacks": mess_item.snacks,
             "dinner": mess_item.dinner,
             "createdAt": mess_item.created_at.isoformat(),
-            "updatedAt": mess_item.updated_at.isoformat(),
+            "updatedAt": getattr(mess_item, "updated_at", mess_item.created_at).isoformat(),
         }), 201
+
     except Exception as e:
         db.session.rollback()
+        print("create_mess_item error:", e)
         return jsonify({"error": str(e)}), 400
+
 
 
 @mess_bp.put("/mess/<int:mess_id>")
@@ -90,7 +121,6 @@ def update_mess_item(mess_id):
     
     try:
         if "day" in data:
-            # Check if new day already exists (and it's not the same item)
             existing = Mess.query.filter_by(day=data.get("day")).first()
             if existing and existing.id != mess_id:
                 return jsonify({"error": "Day already exists in schedule"}), 409

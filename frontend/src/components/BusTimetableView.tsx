@@ -60,7 +60,6 @@ const BusTimetableView: React.FC = () => {
         Bus Timetable
       </h1>
 
-      {/* Two-column responsive layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {routes.map((route) => (
           <div

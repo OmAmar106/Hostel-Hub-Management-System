@@ -6,7 +6,6 @@ import { ThemeProvider } from "./contexts/ThemeContext"; // ✅ Import the Theme
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    {/* ✅ Wrap the entire app inside ThemeProvider */}
     <ThemeProvider>
       <App />
     </ThemeProvider>

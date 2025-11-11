@@ -19,7 +19,7 @@ def role_required(*roles):
 @issues_bp.get("/issues")
 @jwt_required()
 def get_issues():
-    issues = Issue.query.order_by(Issue.created_at.desc()).all()
+    issues = Issue.query.filter(Issue.status != "Cancelled").order_by(Issue.created_at.desc()).all()
     return jsonify([
         {
             "id": i.id,
@@ -39,6 +39,7 @@ def get_issues():
         }
         for i in issues
     ])
+
 
 @issues_bp.post("/issues")
 @role_required("student", "admin")
@@ -72,7 +73,6 @@ def update_issue(issue_id):
     if not issue:
         return jsonify({"error": "Issue not found"}), 404
 
-    # Allow update if requester is the creator or admin
     claims = get_jwt()
     req_id = int(get_jwt_identity())  
 
@@ -190,3 +190,48 @@ def unassign_issue(issue_id):
     issue.assigned_at = None
     db.session.commit()
     return jsonify({"message": "Worker unassigned successfully"}), 200
+
+@issues_bp.delete("/issues/<int:issue_id>")
+@jwt_required()
+def delete_issue(issue_id):
+    """
+    Soft-delete an issue (mark as Cancelled) if requester is the creator or an admin.
+    """
+    issue = Issue.query.get(issue_id)
+    if not issue:
+        return jsonify({"error": "Issue not found"}), 404
+
+    claims = get_jwt()
+    requester = get_jwt_identity()
+
+    try:
+        req_user = None
+        try:
+            requester_id = int(requester)
+            req_user = User.query.filter_by(id=requester_id).first()
+        except Exception:
+            req_user = User.query.filter_by(email=str(requester)).first() or User.query.filter_by(full_name=str(requester)).first()
+
+        requester_name = req_user.full_name if req_user else str(requester)
+    except Exception:
+        requester_name = str(requester)
+
+    is_owner = False
+    if isinstance(requester_name, str):
+        is_owner = requester_name == issue.created_by
+    else:
+        is_owner = str(requester_name) == str(issue.created_by)
+
+    is_admin = claims.get("role") == "admin"
+
+    if not (is_owner or is_admin):
+        return jsonify({"error": "Forbidden"}), 403
+
+    issue.status = "Cancelled"
+
+    issue.assigned_to = None
+    issue.assigned_at = None
+
+    db.session.commit()
+
+    return jsonify({"message": "Issue deleted (cancelled)", "id": issue.id}), 200
