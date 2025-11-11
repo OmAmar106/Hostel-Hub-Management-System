@@ -1,15 +1,16 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
-import { useData } from "@/contexts/DataContext";
-import { IssueCard } from "@/components/IssueCard";
-import { IssueModal } from "@/components/IssueModal";
-import { IssueForm } from "@/components/IssueForm";
-import { NoticeBoard } from "@/components/NoticeBoard";
-import { Issue } from "@/contexts/DataContext";
-import { Home, PlusCircle, Megaphone, LogOut, User } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
+import { IssueCard } from '@/components/IssueCard';
+import { IssueModal } from '@/components/IssueModal';
+import { IssueForm } from '@/components/IssueForm';
+import { NoticeBoard } from '@/components/NoticeBoard';
+import { Issue } from '@/contexts/DataContext';
+import { Home, PlusCircle, Megaphone, LogOut, User } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import ProfileAvatar from "@/components/ui/ProfileAvatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -100,22 +101,7 @@ const StudentDashboard = () => {
             Student Dashboard
           </h1>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-700 dark:text-gray-300">
-              {user?.name} • Room {user?.roomNo || "N/A"}
-            </span>
-
-            {/* ✅ Dark / Light Mode Toggle Button */}
-            <ThemeToggle />
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
+            <ProfileAvatar />
           </div>
         </div>
       </header>
@@ -137,7 +123,8 @@ const StudentDashboard = () => {
               onClick={() => setActiveTab("my")}
               className="gap-2"
             >
-              <User className="h-4 w-4" />
+              {/* using icon from lucide-react */}
+              <PlusCircle className="h-4 w-4" />
               My Issues
             </Button>
             <Button
@@ -168,12 +155,7 @@ const StudentDashboard = () => {
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {issues.map((issue) => (
-                <IssueCard
-                  key={issue.id}
-                  issue={issue}
-                  onView={handleView}
-                  showActions={false}
-                />
+                <IssueCard key={issue.id} issue={issue} onView={handleView} showActions={false} />
               ))}
             </div>
           </div>
