@@ -30,6 +30,17 @@ export interface Notice {
   createdAt: string;
 }
 
+export interface MessItem {
+  id: number;
+  day: string;
+  breakfast: string;
+  lunch: string;
+  snacks: string;
+  dinner: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Repairer {
   id: string;
   name: string;
@@ -38,14 +49,18 @@ export interface Repairer {
 interface DataContextType {
   issues: Issue[];
   notices: Notice[];
+  messItems: MessItem[];
   categories: Category[];
   repairers: Repairer[];
   loading: boolean;
   addIssue: (issue: any) => Promise<void>;
   addNotice: (notice: any) => Promise<void>;
+  addMessItem: (messItem: any) => Promise<void>;
   updateIssue: (issueId: number, updates: Partial<Issue>) => Promise<void>;
+  updateMessItem: (messId: number, updates: Partial<MessItem>) => Promise<void>;
   deleteIssue: (issueId: number) => Promise<boolean>;
   deleteNotice: (noticeId: number) => Promise<boolean>;
+  deleteMessItem: (messId: number) => Promise<boolean>;
   upvoteIssue: (issueId: number) => Promise<void>;
   downvoteIssue: (issueId: number) => Promise<void>;
 }
@@ -57,6 +72,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const token = localStorage.getItem("access_token");
   const [issues, setIssues] = useState<Issue[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [messItems, setMessItems] = useState<MessItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [repairers, setRepairers] = useState<Repairer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,14 +85,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setLoading(true);
 
-      const [issuesRes, categoriesRes, noticesRes, workersRes] = await Promise.all([
+      const [issuesRes, categoriesRes, noticesRes, workersRes, messRes] = await Promise.all([
         fetch(`${API_BASE}/api/issues`, { headers }),
         fetch(`${API_BASE}/api/categories`, { headers }),
         fetch(`${API_BASE}/api/notices`, { headers }),
         fetch(`${API_BASE}/api/workers`, { headers }),
+        fetch(`${API_BASE}/api/mess`, { headers }),
       ]);
 
-      if ([issuesRes, categoriesRes, noticesRes, workersRes].some(r => r.status === 401 || r.status === 422)) {
+      if ([issuesRes, categoriesRes, noticesRes, workersRes, messRes].some(r => r.status === 401 || r.status === 422)) {
         toast.error("Session expired. Please log in again.");
         localStorage.removeItem("access_token");
         sessionStorage.removeItem("user");
@@ -84,19 +101,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
 
-      if (![issuesRes.ok, categoriesRes.ok, noticesRes.ok, workersRes.ok].every(Boolean))
+      if (![issuesRes.ok, categoriesRes.ok, noticesRes.ok, workersRes.ok, messRes.ok].every(Boolean))
         throw new Error("Failed to fetch some resources");
 
-      const [issuesData, categoriesData, noticesData, workersData] = await Promise.all([
+      const [issuesData, categoriesData, noticesData, workersData, messData] = await Promise.all([
         issuesRes.json(),
         categoriesRes.json(),
         noticesRes.json(),
         workersRes.json(),
+        messRes.json(),
       ]);
 
       setIssues(issuesData);
       setCategories(categoriesData);
       setNotices(noticesData);
+      setMessItems(messData);
 
       const repairerList = workersData.filter((w: any) => w.role === "worker");
       setRepairers(repairerList);
@@ -249,6 +268,64 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Mess Operations
+  const addMessItem = async (messData: any) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/mess`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(messData),
+      });
+      if (!res.ok) throw new Error();
+      await fetchAllData();
+      toast.success("Mess item created successfully!");
+    } catch {
+      toast.error("Failed to create mess item");
+    }
+  };
+
+  const updateMessItem = async (messId: number, updates: Partial<MessItem>) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/mess/${messId}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify(updates),
+      });
+      if (!res.ok) throw new Error();
+      await fetchAllData();
+      toast.success("Mess item updated successfully!");
+    } catch {
+      toast.error("Failed to update mess item");
+    }
+  };
+
+  const deleteMessItem = async (messId: number) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/mess/${messId}`, {
+        method: "DELETE",
+        headers,
+      });
+
+      if (!res.ok) {
+        let msg = "Failed to delete mess item";
+        try {
+          const json = await res.json();
+          if (json?.error) msg = json.error;
+        } catch {}
+        toast.error(msg);
+        return false;
+      }
+
+      await fetchAllData();
+      toast.success("Mess item deleted");
+      return true;
+    } catch (err) {
+      console.error("deleteMessItem error:", err);
+      toast.error("Failed to delete mess item");
+      return false;
+    }
+  };
+
   useEffect(() => {
     // fetch data if token exists (logged in) or, optionally, always fetch public data
     if (token) fetchAllData();
@@ -259,14 +336,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       value={{
         issues,
         notices,
+        messItems,
         categories,
         repairers,
         loading,
         addIssue,
         addNotice,
+        addMessItem,
         updateIssue,
+        updateMessItem,
         deleteIssue,
         deleteNotice,
+        deleteMessItem,
         upvoteIssue,
         downvoteIssue,
       }}

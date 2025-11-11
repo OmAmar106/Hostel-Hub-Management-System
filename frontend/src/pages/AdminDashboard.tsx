@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
 import { IssueModal } from "@/components/IssueModal";
 import { NoticeForm } from "@/components/NoticeForm";
+import { MessForm } from "@/components/MessForm";
 import { Issue, Notice } from "@/contexts/DataContext";
 import { CheckCircle, Clock, Loader2 } from "lucide-react";
 import {
@@ -17,6 +18,7 @@ import {
   Eye,
   Plus,
   UserPlus,
+  UtensilsCrossed,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -55,9 +57,9 @@ const AdminDashboard = () => {
   const [workers, setWorkers] = useState<any[]>([]);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { issues, notices, addNotice, updateIssue, deleteNotice } = useData();
+  const { issues, notices, messItems, addNotice, updateIssue, deleteNotice, addMessItem, updateMessItem, deleteMessItem } = useData();
 
-  const [activeTab, setActiveTab] = useState<"issues" | "notices" | "workers">("issues");
+  const [activeTab, setActiveTab] = useState<"issues" | "notices" | "workers" | "mess">("issues");
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [noticeFormOpen, setNoticeFormOpen] = useState(false);
@@ -236,7 +238,7 @@ const AdminDashboard = () => {
       <nav className="border-b bg-white dark:bg-gray-800 dark:border-gray-700">
         <div className="container mx-auto px-4">
           <div className="flex gap-2 py-2">
-            {(["issues", "notices", "workers"] as const).map((tab) => (
+            {(["issues", "notices", "workers", "mess"] as const).map((tab) => (
               <Button
                 key={tab}
                 variant={activeTab === tab ? "default" : "ghost"}
@@ -246,11 +248,14 @@ const AdminDashboard = () => {
                 {tab === "issues" && <ClipboardList className="h-4 w-4" />}
                 {tab === "notices" && <Megaphone className="h-4 w-4" />}
                 {tab === "workers" && <Wrench className="h-4 w-4" />}
+                {tab === "mess" && <UtensilsCrossed className="h-4 w-4" />}
                 {tab === "issues"
                   ? "All Complaints"
                   : tab === "notices"
                     ? "Manage Notices"
-                    : "Manage Workers"}
+                    : tab === "workers"
+                    ? "Manage Workers"
+                    : "Manage Mess"}
               </Button>
             ))}
           </div>
@@ -547,6 +552,15 @@ const AdminDashboard = () => {
               ))}
             </div>
           </div>
+        )}
+
+        {/* MESS */}
+        {activeTab === "mess" && (
+          <MessForm 
+            messItems={messItems}
+            onAdd={addMessItem}
+            onUpdate={updateMessItem}
+          />
         )}
       </main>
 
