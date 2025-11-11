@@ -14,7 +14,7 @@ export interface Issue {
   title: string;
   description: string;
   roomNumber: string;
-  status: "Pending" | "In Progress" | "Resolved";
+  status: "Pending" | "In Progress" | "Resolved" | "Cancelled";
   createdBy: string;
   createdAt: string;
   upvotes: number;
@@ -108,7 +108,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-
   // Issue Operations
   const addIssue = async (issueData: any) => {
     try {
@@ -141,25 +140,70 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const deleteIssue = async (issueId: number) => {
-    setIssues((prev) => prev.filter((i) => i.id !== issueId));
-    toast.info("Issue deleted locally (backend deletion not implemented)");
-    return true;
+    try {
+      const res = await fetch(`${API_BASE}/api/issues/${issueId}`, {
+        method: "DELETE",
+        headers,
+      });
+
+      if (!res.ok) {
+        // show message from server if present
+        let msg = "Failed to delete issue";
+        try {
+          const json = await res.json();
+          if (json?.error) msg = json.error;
+        } catch {}
+        toast.error(msg);
+        return false;
+      }
+
+      // re-fetch authoritative data
+      await fetchAllData();
+      toast.success("Issue deleted");
+      return true;
+    } catch (err) {
+      console.error("deleteIssue error:", err);
+      toast.error("Failed to delete issue");
+      return false;
+    }
   };
 
   const upvoteIssue = async (issueId: number) => {
+    if (!user) {
+      toast.error("Please login to upvote");
+      return;
+    }
     try {
-      await fetch(`${API_BASE}/api/issues/${issueId}/upvote`, {
+      const res = await fetch(`${API_BASE}/api/issues/${issueId}/upvote`, {
         method: "POST",
         headers,
+        body: JSON.stringify({ userId: user.id }),
       });
+      if (!res.ok) throw new Error();
       await fetchAllData();
-    } catch {
+    } catch (err) {
+      console.error("upvoteIssue error:", err);
       toast.error("Failed to upvote");
     }
   };
 
-  const downvoteIssue = async () => {
-    toast.info("Downvote not supported on backend yet");
+  const downvoteIssue = async (issueId: number) => {
+    if (!user) {
+      toast.error("Please login to downvote");
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/api/issues/${issueId}/downvote`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ userId: user.id }),
+      });
+      if (!res.ok) throw new Error();
+      await fetchAllData();
+    } catch (err) {
+      console.error("downvoteIssue error:", err);
+      toast.error("Failed to downvote");
+    }
   };
 
   // Notice Operations
@@ -179,12 +223,34 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const deleteNotice = async (noticeId: number) => {
-    setNotices((prev) => prev.filter((n) => n.id !== noticeId));
-    toast.info("Notice deleted locally (backend deletion not implemented)");
-    return true;
+    try {
+      const res = await fetch(`${API_BASE}/api/notices/${noticeId}`, {
+        method: "DELETE",
+        headers,
+      });
+
+      if (!res.ok) {
+        let msg = "Failed to delete notice";
+        try {
+          const json = await res.json();
+          if (json?.error) msg = json.error;
+        } catch {}
+        toast.error(msg);
+        return false;
+      }
+
+      await fetchAllData();
+      toast.success("Notice deleted");
+      return true;
+    } catch (err) {
+      console.error("deleteNotice error:", err);
+      toast.error("Failed to delete notice");
+      return false;
+    }
   };
 
   useEffect(() => {
+    // fetch data if token exists (logged in) or, optionally, always fetch public data
     if (token) fetchAllData();
   }, [token]);
 

@@ -104,28 +104,54 @@ const AdminDashboard = () => {
   };
 
   const handleAssignWorker = async (issueId: number, workerId: number) => {
+  try {
+    const token = localStorage.getItem("access_token");
+
+    const res = await fetch(`${API_BASE}/api/issues/${issueId}/assign`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
+      },
+      body: JSON.stringify({ worker_id: workerId }), // 👈 use correct key
+    });
+
+    console.debug("Assign response status:", res.status);
+    let payload = null;
     try {
-      const res = await fetch(`${API_BASE}/api/issues/${issueId}/assign`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-        },
-        body: JSON.stringify({ worker_id: workerId }),
-      });
-      if (!res.ok) throw new Error("Failed to assign");
-      toast({
-        title: "Assigned Successfully",
-        description: "Worker assigned to issue.",
-      });
+      payload = await res.json();
+      console.debug("Assign response body:", payload);
     } catch {
+      console.debug("No JSON response from backend");
+    }
+
+    if (!res.ok) {
+      const serverMsg = payload?.error || payload?.message || `HTTP ${res.status}`;
       toast({
-        title: "Error",
-        description: "Could not assign worker.",
+        title: "Failed to assign",
+        description: serverMsg,
         variant: "destructive",
       });
+      return;
     }
-  };
+
+    toast({
+      title: "Assigned Successfully",
+      description: "Worker assigned to issue.",
+    });
+
+    // Refresh the page or data so UI updates
+    window.location.reload(); // 👈 temporary refresh until we expose fetchAllData
+  } catch (err) {
+    console.error("Error assigning worker:", err);
+    toast({
+      title: "Error",
+      description: "Could not assign worker.",
+      variant: "destructive",
+    });
+  }
+};
+
 
   const handleEditNotice = (notice: Notice) => {
     setEditingNotice(notice);
@@ -176,6 +202,9 @@ const AdminDashboard = () => {
   useEffect(() => {
     fetchWorkers();
   }, [activeTab, workerFormOpen]);
+
+  // helper for safe string comparison
+  const normalize = (s?: any) => (s === undefined || s === null ? "" : String(s).trim().toLowerCase());
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
@@ -254,106 +283,174 @@ const AdminDashboard = () => {
                     <TableBody>
                       {issues
                         .sort((a, b) => (a.assignee ? 1 : -1))
-                        .map((issue) => (
-                          <TableRow key={issue.id}>
-                            <TableCell>{issue.id}</TableCell>
-                            <TableCell>{issue.createdBy}</TableCell>
-                            <TableCell>{issue.roomNumber}</TableCell>
-                            <TableCell className="max-w-xs truncate">{issue.title}</TableCell>
+                        .map((issue) => {
+                          // ---------- robust matching & debug logs ----------
+                          // Debug logs — remove these once you confirm fields are correct
+                          // (Open DevTools console to inspect)
+                          console.debug("DEBUG issue:", issue);
+                          // show only a small sample to avoid huge logs
+                          console.debug("DEBUG workers sample:", workers.slice(0, 8));
 
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                {issue.status === "Resolved" ? (
-                                  <CheckCircle className="h-4 w-4 text-green-500" />
-                                ) : issue.status === "In Progress" ? (
-                                  <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
-                                ) : (
-                                  <Clock className="h-4 w-4 text-red-500" />
-                                )}
-                                <span
-                                  className={
-                                    issue.status === "Resolved"
-                                      ? "text-green-600 font-medium"
-                                      : issue.status === "In Progress"
-                                        ? "text-blue-600 font-medium"
-                                        : "text-red-600 font-medium"
-                                  }
-                                >
-                                  {issue.status}
-                                </span>
-                              </div>
-                            </TableCell>
+                          // collect possible category-like values from the issue object
+                          const possibleIssueCategories = new Set<string>(
+                            [
+                              normalize((issue as any).category),
+                              normalize((issue as any).categoryName),
+                              normalize((issue as any).type),
+                              normalize((issue as any).issue_type),
+                              normalize((issue as any).worker_type),
+                              normalize((issue as any).ticket_category),
+                              normalize((issue as any).category_id),
+                              normalize((issue as any).categoryId),
+                              normalize((issue as any).title), // last resort
+                            ].filter(Boolean)
+                          );
 
-                            <TableCell>
-                              {issue.assignee ? (
-                                <div className="flex items-center gap-3">
-                                  <span className="text-sm text-gray-500 italic">
-                                    Assigned to{" "}
-                                    <strong>
-                                      {workers.find((w) => w.id === issue.assignee)?.name || "Unknown"}
-                                    </strong>
-                                  </span>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-blue-600 hover:text-blue-800"
-                                    onClick={async () => {
-                                      // Confirm before unassigning
-                                      if (!confirm("Unassign this worker?")) return;
+                          // If still empty, try looking into description for hints (debug only)
+                          if (possibleIssueCategories.size === 0) {
+                            const desc = normalize((issue as any).description || "");
+                            if (desc) {
+                              // take first few words as a candidate — debug only
+                              const firstWords = desc.split(" ").slice(0, 3).join(" ");
+                              possibleIssueCategories.add(firstWords);
+                            }
+                          }
 
-                                      try {
-                                        const res = await fetch(`${API_BASE}/api/issues/${issue.id}/unassign`, {
-                                          method: "POST",
-                                          headers: {
-                                            "Content-Type": "application/json",
-                                            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-                                          },
-                                        });
-                                        if (!res.ok) throw new Error("Failed to unassign");
-                                        toast({
-                                          title: "Worker Unassigned",
-                                          description: "You can now assign this issue again.",
-                                        });
-                                      } catch {
-                                        toast({
-                                          title: "Error",
-                                          description: "Failed to unassign worker.",
-                                          variant: "destructive",
-                                        });
-                                      }
-                                    }}
+                          // build candidates by flexible matching
+                          const candidates = workers.filter((w) => {
+                            const workerType = normalize(
+                              (w as any).worker_type ||
+                              (w as any).type ||
+                              (w as any).category ||
+                              (w as any).workerType
+                            );
+                            const workerName = normalize((w as any).name || (w as any).full_name || (w as any).email || "");
+                            const workerIdStr = normalize((w as any).id);
+
+                            for (const ic of possibleIssueCategories) {
+                              if (!ic) continue;
+                              // exact match
+                              if (workerType && workerType === ic) return true;
+                              // partial contains
+                              if (workerType && (ic.includes(workerType) || workerType.includes(ic))) return true;
+                              // id match fallback
+                              if (workerIdStr && workerIdStr === ic) return true;
+                              // name in category (rare)
+                              if (workerName && ic.includes(workerName)) return true;
+                            }
+                            return false;
+                          });
+
+                          if (candidates.length === 0) {
+                            console.warn(
+                              `No worker candidates for issue id=${issue.id}. possibleIssueCategories=`,
+                              Array.from(possibleIssueCategories).slice(0, 6)
+                            );
+                          }
+                          // ---------- end matching ----------
+                          return (
+                            <TableRow key={issue.id}>
+                              <TableCell>{issue.id}</TableCell>
+                              <TableCell>{issue.createdBy}</TableCell>
+                              <TableCell>{issue.roomNumber}</TableCell>
+                              <TableCell className="max-w-xs truncate">{issue.title}</TableCell>
+
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  {issue.status === "Resolved" ? (
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                  ) : issue.status === "In Progress" ? (
+                                    <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+                                  ) : (
+                                    <Clock className="h-4 w-4 text-red-500" />
+                                  )}
+                                  <span
+                                    className={
+                                      issue.status === "Resolved"
+                                        ? "text-green-600 font-medium"
+                                        : issue.status === "In Progress"
+                                          ? "text-blue-600 font-medium"
+                                          : "text-red-600 font-medium"
+                                    }
                                   >
-                                    Edit
-                                  </Button>
+                                    {issue.status}
+                                  </span>
                                 </div>
-                              ) : (
-                                <Select
-                                  onValueChange={(v) => handleAssignWorker(issue.id, Number(v))}
-                                >
-                                  <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="Assign Worker" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {workers.map((w) => (
-                                      <SelectItem key={w.id} value={String(w.id)}>
-                                        {w.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              )}
-                            </TableCell>
+                              </TableCell>
 
+                              <TableCell>
+                                {issue.assignee ? (
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-sm text-gray-500 italic">
+                                      Assigned to{" "}
+                                      <strong>
+                                        {workers.find((w) => String(w.id) === String(issue.assignee))?.name ||
+                                          "Unknown"}
+                                      </strong>
+                                    </span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-blue-600 hover:text-blue-800"
+                                      onClick={async () => {
+                                        // Confirm before unassigning
+                                        if (!confirm("Unassign this worker?")) return;
 
-                            <TableCell>
-                              <Button variant="ghost" size="sm" onClick={() => handleView(issue)}>
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                                        try {
+                                          const res = await fetch(`${API_BASE}/api/issues/${issue.id}/unassign`, {
+                                            method: "POST",
+                                            headers: {
+                                              "Content-Type": "application/json",
+                                              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+                                            },
+                                          });
+                                          if (!res.ok) throw new Error("Failed to unassign");
+                                          toast({
+                                            title: "Worker Unassigned",
+                                            description: "You can now assign this issue again.",
+                                          });
+                                          await updateIssue(issue.id, {} as any);
+                                        } catch {
+                                          toast({
+                                            title: "Error",
+                                            description: "Failed to unassign worker.",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      Edit
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Select onValueChange={(v) => handleAssignWorker(issue.id, Number(v))}>
+                                    <SelectTrigger className="w-[180px]">
+                                      <SelectValue placeholder="Assign Worker" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {candidates.length === 0 ? (
+                                        <div className="p-3 text-sm text-gray-500">No workers available for this category</div>
+                                      ) : (
+                                        candidates.map((w) => (
+                                          <SelectItem key={w.id} value={String(w.id)}>
+                                            {w.name || w.full_name || w.email}
+                                          </SelectItem>
+                                        ))
+                                      )}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              </TableCell>
+
+                              <TableCell>
+                                <Button variant="ghost" size="sm" onClick={() => handleView(issue)}>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                     </TableBody>
-
                   </Table>
                 </div>
               </CardContent>
