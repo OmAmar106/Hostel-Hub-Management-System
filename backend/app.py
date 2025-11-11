@@ -10,6 +10,7 @@ from notice import notices_bp
 from dotenv import load_dotenv
 import os
 from workers import workers_bp
+from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
 
@@ -53,7 +54,7 @@ if __name__ == "__main__":
             new_admin = User(
                 full_name="Admin",
                 email="admin@hostel.com",
-                password_hash="admin123",
+                password_hash=generate_password_hash("admin123"),
                 role="admin"
             )
             db.session.add(new_admin)
