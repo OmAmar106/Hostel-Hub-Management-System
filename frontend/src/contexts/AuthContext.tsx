@@ -6,7 +6,7 @@ interface User {
   id: number;
   name: string;
   email: string;
-  role: "student" | "admin" | "repairer";
+  role: "student" | "admin" | "worker";
   roomNo?: string;
   avatarUrl?: string; // optional avatar url
 }

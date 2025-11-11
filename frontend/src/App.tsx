@@ -51,7 +51,7 @@ const DashboardRouter = () => {
       return <StudentDashboard />;
     case "admin":
       return <AdminDashboard />;
-    case "repairer":
+    case "worker":
       return <RepairerDashboard />;
     default:
       return <Navigate to="/login" replace />;
@@ -75,7 +75,7 @@ const App = () => {
                   <Route
                     path="/dashboard"
                     element={
-                      <ProtectedRoute allowedRoles={["student", "admin", "repairer"]}>
+                      <ProtectedRoute allowedRoles={["student", "admin", "worker"]}>
                         <DashboardRouter />
                       </ProtectedRoute>
                     }
