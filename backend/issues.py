@@ -76,3 +76,48 @@ def upvote(issue_id):
     issue.upvotes = len(voters)
     db.session.commit()
     return jsonify({"upvotes": issue.upvotes})
+
+@issues_bp.post("/issues/<int:issue_id>/assign")
+@role_required("admin")
+def assign_issue(issue_id):
+    data = request.get_json() or {}
+    assignee_id = data.get("assignee")
+    if not assignee_id:
+        return jsonify({"error": "Missing assignee_id"}), 400
+    issue = Issue.query.get_or_404(issue_id)
+    assignee = User.query.get(assignee_id)
+
+    issue.assigned_to = assignee_id
+    issue.assigned_at = datetime.datetime.utcnow()
+    db.session.commit()
+
+    return jsonify({
+        "message": "Issue assigned successfully",
+        "assigned_to": assignee.full_name,
+        "assigned_at": issue.assigned_at.isoformat()
+    }),201
+
+@issues_bp.get("/my-issues")
+@role_required("repairer")
+def get_my_issues():
+    claims = get_jwt()
+    worker_email = claims.get("email")
+    worker = User.query.filter_by(email=worker_email).first()
+    if not worker:
+        return jsonify([])
+
+    issues = Issue.query.filter_by(assignee=worker.id).order_by(Issue.created_at.desc()).all()
+    return jsonify([
+        {
+            "id": i.id,
+            "title": i.title,
+            "description": i.description,
+            "roomNumber": i.room_number,
+            "status": i.status,
+            "createdBy": i.created_by,
+            "createdAt": i.created_at.isoformat(),
+            "upvotes": i.upvotes,
+            "voters": i.voters.split(",") if i.voters else [],
+            "assignedTo": i.assigned_to,
+        } for i in issues
+    ])

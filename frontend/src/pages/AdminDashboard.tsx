@@ -15,6 +15,7 @@ import {
   Trash2,
   Eye,
   Plus,
+  UserPlus,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -44,7 +45,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkerForm } from "@/components/WorkerForm";
-import ThemeToggle from "@/components/ui/ThemeToggle"; // ✅ Added import
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 const API_BASE = "http://localhost:5000";
 
@@ -55,9 +56,7 @@ const AdminDashboard = () => {
   const { user, logout } = useAuth();
   const { issues, notices, addNotice, updateIssue, deleteNotice } = useData();
 
-  const [activeTab, setActiveTab] = useState<"issues" | "notices" | "workers">(
-    "issues"
-  );
+  const [activeTab, setActiveTab] = useState<"issues" | "notices" | "workers">("issues");
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [noticeFormOpen, setNoticeFormOpen] = useState(false);
@@ -65,28 +64,70 @@ const AdminDashboard = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [noticeToDelete, setNoticeToDelete] = useState<number | null>(null);
 
+  // 🔹 Logout
   const handleLogout = () => {
     logout();
     navigate("/");
   };
 
+  // 🔹 Open issue modal
   const handleView = (issue: Issue) => {
     setSelectedIssue(issue);
     setViewModalOpen(true);
   };
 
-  const handleStatusChange = async (
-    issueId: number,
-    newStatus: Issue["status"]
-  ) => {
-    const updates: Partial<Issue> = { status: newStatus };
-    await updateIssue(issueId, updates);
-    toast({
-      title: "Status updated",
-      description: `Issue status changed to ${newStatus}`,
-    });
+  // 🔹 Update issue status
+  const handleStatusChange = async (issueId: number, newStatus: Issue["status"]) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/issues/${issueId}/status`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      toast({
+        title: "Status Updated",
+        description: `Issue marked as ${newStatus}`,
+      });
+      await updateIssue(issueId, { status: newStatus });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to update issue status",
+        variant: "destructive",
+      });
+    }
   };
 
+  // 🔹 Assign a worker to an issue
+  const handleAssignWorker = async (issueId: number, workerId: number) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/issues/${issueId}/assign`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+        body: JSON.stringify({ worker_id: workerId }),
+      });
+      if (!res.ok) throw new Error("Failed to assign");
+      toast({
+        title: "Assigned Successfully",
+        description: "Worker assigned to issue.",
+      });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Could not assign worker.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // 🔹 Notice management
   const handleEditNotice = (notice: Notice) => {
     setEditingNotice(notice);
     setNoticeFormOpen(true);
@@ -99,20 +140,12 @@ const AdminDashboard = () => {
 
   const confirmDeleteNotice = async () => {
     if (!noticeToDelete) return;
-
     const success = await deleteNotice(noticeToDelete);
-    if (success) {
-      toast({
-        title: "Notice deleted",
-        description: "Notice has been removed",
-      });
-    } else {
-      toast({
-        title: "Error",
-        description: "Failed to delete notice",
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: success ? "Notice Deleted" : "Error",
+      description: success ? "Notice has been removed" : "Failed to delete notice",
+      variant: success ? "default" : "destructive",
+    });
     setDeleteDialogOpen(false);
     setNoticeToDelete(null);
   };
@@ -122,7 +155,7 @@ const AdminDashboard = () => {
     setNoticeFormOpen(true);
   };
 
-  // --- Fetch workers list from backend ---
+  // 🔹 Fetch workers
   const fetchWorkers = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/workers`, {
@@ -131,10 +164,8 @@ const AdminDashboard = () => {
         },
       });
       if (!res.ok) throw new Error("Failed to fetch workers");
-      const data = await res.json();
-      setWorkers(data);
-    } catch (err) {
-      console.error(err);
+      setWorkers(await res.json());
+    } catch {
       toast({
         title: "Error fetching workers",
         description: "Please try again later.",
@@ -159,10 +190,7 @@ const AdminDashboard = () => {
             <span className="text-sm text-gray-700 dark:text-gray-300">
               {user?.name} (Admin)
             </span>
-
-            {/* ✅ Dark/Light Mode Toggle Button */}
             <ThemeToggle />
-
             <Button
               variant="outline"
               size="sm"
@@ -180,36 +208,30 @@ const AdminDashboard = () => {
       <nav className="border-b bg-white dark:bg-gray-800 dark:border-gray-700">
         <div className="container mx-auto px-4">
           <div className="flex gap-2 py-2">
-            <Button
-              variant={activeTab === "issues" ? "default" : "ghost"}
-              onClick={() => setActiveTab("issues")}
-              className="gap-2"
-            >
-              <ClipboardList className="h-4 w-4" />
-              All Complaints
-            </Button>
-            <Button
-              variant={activeTab === "notices" ? "default" : "ghost"}
-              onClick={() => setActiveTab("notices")}
-              className="gap-2"
-            >
-              <Megaphone className="h-4 w-4" />
-              Manage Notices
-            </Button>
-            <Button
-              variant={activeTab === "workers" ? "default" : "ghost"}
-              onClick={() => setActiveTab("workers")}
-              className="gap-2"
-            >
-              <Wrench className="h-4 w-4" />
-              Manage Workers
-            </Button>
+            {(["issues", "notices", "workers"] as const).map((tab) => (
+              <Button
+                key={tab}
+                variant={activeTab === tab ? "default" : "ghost"}
+                onClick={() => setActiveTab(tab)}
+                className="gap-2"
+              >
+                {tab === "issues" && <ClipboardList className="h-4 w-4" />}
+                {tab === "notices" && <Megaphone className="h-4 w-4" />}
+                {tab === "workers" && <Wrench className="h-4 w-4" />}
+                {tab === "issues"
+                  ? "All Complaints"
+                  : tab === "notices"
+                  ? "Manage Notices"
+                  : "Manage Workers"}
+              </Button>
+            ))}
           </div>
         </div>
       </nav>
 
       {/* Main */}
       <main className="container mx-auto px-4 py-8">
+        {/* ISSUES */}
         {activeTab === "issues" && (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
@@ -226,7 +248,7 @@ const AdminDashboard = () => {
                         <TableHead>Room</TableHead>
                         <TableHead>Title</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Upvotes</TableHead>
+                        <TableHead>Assign</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -236,9 +258,7 @@ const AdminDashboard = () => {
                           <TableCell>{issue.id}</TableCell>
                           <TableCell>{issue.createdBy}</TableCell>
                           <TableCell>{issue.roomNumber}</TableCell>
-                          <TableCell className="max-w-xs truncate">
-                            {issue.title}
-                          </TableCell>
+                          <TableCell className="max-w-xs truncate">{issue.title}</TableCell>
                           <TableCell>
                             <Select
                               value={issue.status}
@@ -251,14 +271,29 @@ const AdminDashboard = () => {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="Pending">Pending</SelectItem>
-                                <SelectItem value="In Progress">
-                                  In Progress
-                                </SelectItem>
+                                <SelectItem value="In Progress">In Progress</SelectItem>
                                 <SelectItem value="Resolved">Resolved</SelectItem>
                               </SelectContent>
                             </Select>
                           </TableCell>
-                          <TableCell>{issue.upvotes}</TableCell>
+                          <TableCell>
+                            <Select
+                              onValueChange={(v) =>
+                                handleAssignWorker(issue.id, Number(v))
+                              }
+                            >
+                              <SelectTrigger className="w-[160px]">
+                                <SelectValue placeholder="Assign Worker" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {workers.map((w) => (
+                                  <SelectItem key={w.id} value={String(w.id)}>
+                                    {w.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
                           <TableCell>
                             <Button
                               variant="ghost"
@@ -278,6 +313,7 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* NOTICES */}
         {activeTab === "notices" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -300,8 +336,7 @@ const AdminDashboard = () => {
                       <div>
                         <CardTitle>{notice.title}</CardTitle>
                         <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                          Posted:{" "}
-                          {new Date(notice.createdAt).toLocaleDateString()}
+                          Posted: {new Date(notice.createdAt).toLocaleDateString()}
                         </p>
                       </div>
                       <div className="flex gap-2">
@@ -333,6 +368,7 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* WORKERS */}
         {activeTab === "workers" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -340,11 +376,10 @@ const AdminDashboard = () => {
                 Manage Workers
               </h2>
               <Button onClick={() => setWorkerFormOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
+                <UserPlus className="h-4 w-4 mr-2" />
                 Add Worker
               </Button>
             </div>
-
             <div className="grid gap-4">
               {workers.map((worker) => (
                 <Card
@@ -389,8 +424,7 @@ const AdminDashboard = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Notice</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this notice? This action cannot be
-              undone.
+              Are you sure you want to delete this notice? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
