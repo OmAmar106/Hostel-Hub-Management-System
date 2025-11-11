@@ -44,7 +44,7 @@ def create_issue():
         title=data["title"],
         description=data["description"],
         room_number=data["roomNumber"],
-        created_by=claims.get("email")
+        created_by=claims.get("full_name")
     )
     db.session.add(issue)
     db.session.commit()
