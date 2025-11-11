@@ -20,7 +20,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
+import ThemeToggle from "@/components/ui/ThemeToggle"; // ✅ Import the theme toggle
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -34,8 +35,8 @@ const StudentDashboard = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [issueToDelete, setIssueToDelete] = useState<number | null>(null);
 
-  // TODO: Backend should filter issues based on user role and permissions
-  const myIssues = issues.filter(issue => issue.createdBy === user?.name); // Assuming createdBy stores the user's name
+  // 🔹 Filter issues belonging to current user
+  const myIssues = issues.filter((issue) => issue.createdBy === user?.name);
 
   // 🔹 Logout handler
   const handleLogout = () => {
@@ -51,8 +52,7 @@ const StudentDashboard = () => {
 
   // 🔹 Edit issue
   const handleEdit = (issue: Issue) => {
-    // TODO: Backend should verify ownership before allowing edit
-    if (issue.status === 'Resolved') {
+    if (issue.status === "Resolved") {
       toast({
         title: "Cannot edit",
         description: "Resolved issues cannot be edited",
@@ -72,21 +72,16 @@ const StudentDashboard = () => {
 
   const confirmDelete = async () => {
     if (!issueToDelete) return;
-    
-    // TODO: Backend should verify ownership before allowing delete
+
     const success = await deleteIssue(issueToDelete);
-    if (success) {
-      toast({
-        title: 'Issue deleted',
-        description: 'Your issue has been removed',
-      });
-    } else {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete issue',
-        variant: 'destructive',
-      });
-    }
+    toast({
+      title: success ? "Issue deleted" : "Error",
+      description: success
+        ? "Your issue has been removed"
+        : "Failed to delete issue",
+      variant: success ? "default" : "destructive",
+    });
+
     setDeleteDialogOpen(false);
     setIssueToDelete(null);
   };
@@ -146,7 +141,8 @@ const StudentDashboard = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        {activeTab === 'all' && (
+        {/* 🔹 All Issues */}
+        {activeTab === "all" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
@@ -165,7 +161,8 @@ const StudentDashboard = () => {
           </div>
         )}
 
-        {activeTab === 'my' && (
+        {/* 🔹 My Issues */}
+        {activeTab === "my" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
@@ -197,9 +194,8 @@ const StudentDashboard = () => {
           </div>
         )}
 
-        {activeTab === 'notices' && (
-          <NoticeBoard notices={notices} />
-        )}
+        {/* 🔹 Notices */}
+        {activeTab === "notices" && <NoticeBoard notices={notices} />}
       </main>
 
       {/* Modals */}
@@ -212,9 +208,8 @@ const StudentDashboard = () => {
         open={formModalOpen}
         onOpenChange={setFormModalOpen}
         issue={editingIssue}
-        addIssue={addIssue} // Pass the function as a prop
-          // We need to get fetchIssues from useData() too
-/>
+        addIssue={addIssue}
+      />
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

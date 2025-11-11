@@ -47,11 +47,16 @@ def create_issue():
     data = request.get_json() or {}
     if not all([data.get("title"), data.get("description"), data.get("roomNumber")]):
         return jsonify({"error": "Missing fields"}), 400
+
     issue = Issue(
         title=data["title"],
         description=data["description"],
         room_number=data["roomNumber"],
+<<<<<<< HEAD
         created_by=claims.get("full_name")
+=======
+        created_by=data["createdBy"]
+>>>>>>> 0a121af618e6e612a688a1a9a35884f686c1922f
     )
     db.session.add(issue)
     db.session.commit()
