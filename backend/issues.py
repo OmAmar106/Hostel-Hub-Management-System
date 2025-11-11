@@ -52,7 +52,7 @@ def create_issue():
         title=data["title"],
         description=data["description"],
         room_number=data["roomNumber"],
-        created_by=data["createdBy"]
+        created_by=data['createdBy'],
     )
     db.session.add(issue)
     db.session.commit()

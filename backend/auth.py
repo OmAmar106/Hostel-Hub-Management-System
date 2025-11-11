@@ -97,3 +97,25 @@ def me():
         "role": user.role,
         "roomNo":user.room_no
     })
+
+def update_profile():
+    user_id = get_jwt_identity()
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"msg": "Missing JSON body"}), 400
+
+    name = data.get("name")
+    email = data.get("email")
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+
+    if name:
+        user.full_name = name
+    if email:
+        user.email = email
+
+    db.session.commit()
+    return jsonify({"msg": "Profile updated"}), 200
