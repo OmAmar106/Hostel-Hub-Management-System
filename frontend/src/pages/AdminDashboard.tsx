@@ -6,6 +6,7 @@ import { useData } from "@/contexts/DataContext";
 import { IssueModal } from "@/components/IssueModal";
 import { NoticeForm } from "@/components/NoticeForm";
 import { Issue, Notice } from "@/contexts/DataContext";
+import { CheckCircle, Clock, Loader2 } from "lucide-react";
 import {
   ClipboardList,
   Wrench,
@@ -102,7 +103,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // 🔹 Assign a worker to an issue
   const handleAssignWorker = async (issueId: number, workerId: number) => {
     try {
       const res = await fetch(`${API_BASE}/api/issues/${issueId}/assign`, {
@@ -127,7 +127,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // 🔹 Notice management
   const handleEditNotice = (notice: Notice) => {
     setEditingNotice(notice);
     setNoticeFormOpen(true);
@@ -175,7 +174,7 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-      fetchWorkers();
+    fetchWorkers();
   }, [activeTab, workerFormOpen]);
 
   return (
@@ -221,8 +220,8 @@ const AdminDashboard = () => {
                 {tab === "issues"
                   ? "All Complaints"
                   : tab === "notices"
-                  ? "Manage Notices"
-                  : "Manage Workers"}
+                    ? "Manage Notices"
+                    : "Manage Workers"}
               </Button>
             ))}
           </div>
@@ -253,59 +252,108 @@ const AdminDashboard = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {issues.map((issue) => (
-                        <TableRow key={issue.id}>
-                          <TableCell>{issue.id}</TableCell>
-                          <TableCell>{issue.createdBy}</TableCell>
-                          <TableCell>{issue.roomNumber}</TableCell>
-                          <TableCell className="max-w-xs truncate">{issue.title}</TableCell>
-                          <TableCell>
-                            <Select
-                              value={issue.status}
-                              onValueChange={(v) =>
-                                handleStatusChange(issue.id, v as Issue["status"])
-                              }
-                            >
-                              <SelectTrigger className="w-[140px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Pending">Pending</SelectItem>
-                                <SelectItem value="In Progress">In Progress</SelectItem>
-                                <SelectItem value="Resolved">Resolved</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            <Select
-                              onValueChange={(v) =>
-                                handleAssignWorker(issue.id, Number(v))
-                              }
-                            >
-                              <SelectTrigger className="w-[160px]">
-                                <SelectValue placeholder="Assign Worker" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {workers.map((w) => (
-                                  <SelectItem key={w.id} value={String(w.id)}>
-                                    {w.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleView(issue)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {issues
+                        .sort((a, b) => (a.assignee ? 1 : -1))
+                        .map((issue) => (
+                          <TableRow key={issue.id}>
+                            <TableCell>{issue.id}</TableCell>
+                            <TableCell>{issue.createdBy}</TableCell>
+                            <TableCell>{issue.roomNumber}</TableCell>
+                            <TableCell className="max-w-xs truncate">{issue.title}</TableCell>
+
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {issue.status === "Resolved" ? (
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                ) : issue.status === "In Progress" ? (
+                                  <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+                                ) : (
+                                  <Clock className="h-4 w-4 text-red-500" />
+                                )}
+                                <span
+                                  className={
+                                    issue.status === "Resolved"
+                                      ? "text-green-600 font-medium"
+                                      : issue.status === "In Progress"
+                                        ? "text-blue-600 font-medium"
+                                        : "text-red-600 font-medium"
+                                  }
+                                >
+                                  {issue.status}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            <TableCell>
+                              {issue.assignee ? (
+                                <div className="flex items-center gap-3">
+                                  <span className="text-sm text-gray-500 italic">
+                                    Assigned to{" "}
+                                    <strong>
+                                      {workers.find((w) => w.id === issue.assignee)?.name || "Unknown"}
+                                    </strong>
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-blue-600 hover:text-blue-800"
+                                    onClick={async () => {
+                                      // Confirm before unassigning
+                                      if (!confirm("Unassign this worker?")) return;
+
+                                      try {
+                                        const res = await fetch(`${API_BASE}/api/issues/${issue.id}/unassign`, {
+                                          method: "POST",
+                                          headers: {
+                                            "Content-Type": "application/json",
+                                            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+                                          },
+                                        });
+                                        if (!res.ok) throw new Error("Failed to unassign");
+                                        toast({
+                                          title: "Worker Unassigned",
+                                          description: "You can now assign this issue again.",
+                                        });
+                                      } catch {
+                                        toast({
+                                          title: "Error",
+                                          description: "Failed to unassign worker.",
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    Edit
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Select
+                                  onValueChange={(v) => handleAssignWorker(issue.id, Number(v))}
+                                >
+                                  <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Assign Worker" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {workers.map((w) => (
+                                      <SelectItem key={w.id} value={String(w.id)}>
+                                        {w.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </TableCell>
+
+
+                            <TableCell>
+                              <Button variant="ghost" size="sm" onClick={() => handleView(issue)}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
                     </TableBody>
+
                   </Table>
                 </div>
               </CardContent>
@@ -313,7 +361,6 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* NOTICES */}
         {activeTab === "notices" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -368,7 +415,6 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* WORKERS */}
         {activeTab === "workers" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
