@@ -59,7 +59,7 @@ def create_issue():
     return jsonify({"message": "Issue created", "id": issue.id}), 201
 
 @issues_bp.post("/issues/<int:issue_id>/status")
-@role_required("admin")
+@role_required("worker")
 def update_status(issue_id):
     data = request.get_json() or {}
     new_status = data.get("status")
