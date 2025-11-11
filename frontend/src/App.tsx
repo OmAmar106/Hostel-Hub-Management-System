@@ -16,7 +16,6 @@ import { useEffect, useState } from "react";
 
 const queryClient = new QueryClient();
 
-// Protected route
 const ProtectedRoute = ({
   children,
   allowedRoles,
@@ -40,7 +39,6 @@ const ProtectedRoute = ({
   return <>{children}</>;
 };
 
-// Role router
 const DashboardRouter = () => {
   const { user } = useAuth();
 
