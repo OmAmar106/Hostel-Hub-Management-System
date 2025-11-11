@@ -33,7 +33,9 @@ def get_issues():
             "voters": i.voters.split(",") if i.voters else [],
             "assignedTo": i.assigned_to,
             "assignedWorker": i.assignee.full_name if i.assignee else None,
-            "assignedAt": i.assigned_at.isoformat() if i.assigned_at else None
+            "assignedAt": i.assigned_at.isoformat() if i.assigned_at else None,
+            "assignee": i.assigned_to,
+            "assigneeName": i.assignee.full_name if i.assignee else None,
         }
         for i in issues
     ])
@@ -67,7 +69,6 @@ def update_status(issue_id):
     db.session.commit()
     return jsonify({"message": "Status updated"})
 
-# ✅ Updated toggle upvote route
 @issues_bp.post("/issues/<int:issue_id>/upvote")
 @role_required("student", "admin")
 def toggle_upvote(issue_id):
@@ -75,10 +76,8 @@ def toggle_upvote(issue_id):
     email = claims.get("email")
     issue = Issue.query.get_or_404(issue_id)
 
-    # Convert stored comma-separated voters string into a set
     voters = set(filter(None, (issue.voters or "").split(",")))
 
-    # Toggle behavior: remove if exists, add otherwise
     if email in voters:
         voters.remove(email)
         message = "Upvote removed"
@@ -86,7 +85,6 @@ def toggle_upvote(issue_id):
         voters.add(email)
         message = "Upvoted successfully"
 
-    # Update database
     issue.voters = ",".join(voters)
     issue.upvotes = len(voters)
     db.session.commit()
@@ -127,7 +125,7 @@ def get_my_issues():
     if not worker:
         return jsonify([])
 
-    issues = Issue.query.filter_by(assignee=worker.id).order_by(Issue.created_at.desc()).all()
+    issues = Issue.query.filter_by(assigned_to=worker.id).order_by(Issue.created_at.desc()).all()
     return jsonify([
         {
             "id": i.id,
@@ -142,3 +140,12 @@ def get_my_issues():
             "assignedTo": i.assigned_to,
         } for i in issues
     ])
+
+@issues_bp.post("/issues/<int:issue_id>/unassign")
+@role_required("admin")
+def unassign_issue(issue_id):
+    issue = Issue.query.get_or_404(int(issue_id))
+    issue.assigned_to = None
+    issue.assigned_at = None
+    db.session.commit()
+    return jsonify({"message": "Worker unassigned successfully"}), 200
