@@ -1,201 +1,169 @@
-// Mock API service with simulated network latency
-// TODO: Replace with actual backend API calls
+// API service using real Flask backend
+// Replaces in-memory mock data
 
-import { users, issues, notices, categories, User, Issue, Notice } from './mockData';
+import { User, Issue, Notice } from "./mockData";
 
-const NETWORK_DELAY = 500; // Simulate network latency
+const BASE_URL = "http://localhost:5000/api"; // 👈 change if your backend runs elsewhere
 
-// Simulated network delay
-const delay = () => new Promise(resolve => setTimeout(resolve, NETWORK_DELAY));
-
-// In-memory data store
-let usersStore = [...users];
-let issuesStore = [...issues];
-let noticesStore = [...notices];
-
-// Auth API
+// ------------------- Auth API -------------------
 export const authApi = {
   async login(email: string, password: string): Promise<User | null> {
-    await delay();
-    // TODO: Replace with actual backend authentication
-    const user = usersStore.find(u => u.email === email && u.password === password);
-    if (user) {
-      const { password: _, ...userWithoutPassword } = user;
-      return userWithoutPassword as User;
-    }
-    return null;
+    const res = await fetch(`${BASE_URL}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) return null;
+    return res.json();
   },
 
-  async signup(userData: Omit<User, 'id'>): Promise<User> {
-    await delay();
-    // TODO: Replace with actual backend user creation
-    const newUser: User = {
-      ...userData,
-      id: `s${Date.now()}`,
-    };
-    usersStore.push(newUser);
-    const { password: _, ...userWithoutPassword } = newUser;
-    return userWithoutPassword as User;
+  async signup(userData: Omit<User, "id">): Promise<User> {
+    const res = await fetch(`${BASE_URL}/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(userData),
+    });
+    if (!res.ok) throw new Error("Signup failed");
+    return res.json();
   },
 };
 
-// Issues API
+// ------------------- Issues API -------------------
 export const issuesApi = {
   async getAll(): Promise<Issue[]> {
-    await delay();
-    // TODO: Replace with actual backend API call
-    return issuesStore.filter(i => i.status !== 'Cancelled');
+    const res = await fetch(`${BASE_URL}/issues`);
+    if (!res.ok) throw new Error("Failed to fetch issues");
+    return res.json();
   },
 
   async getById(id: string): Promise<Issue | null> {
-    await delay();
-    // TODO: Replace with actual backend API call
-    return issuesStore.find(i => i.id === id) || null;
+    const res = await fetch(`${BASE_URL}/issues/${id}`);
+    if (!res.ok) return null;
+    return res.json();
   },
 
   async getByStudentId(studentId: string): Promise<Issue[]> {
-    await delay();
-    // TODO: Replace with actual backend API call
-    return issuesStore.filter(i => i.studentId === studentId && i.status !== 'Cancelled');
+    const res = await fetch(`${BASE_URL}/issues?student_id=${studentId}`);
+    if (!res.ok) throw new Error("Failed to fetch student issues");
+    return res.json();
   },
 
   async getByRepairerId(repairerId: string): Promise<Issue[]> {
-    await delay();
-    // TODO: Replace with actual backend API call
-    return issuesStore.filter(i => i.assignedRepairerId === repairerId);
+    const res = await fetch(`${BASE_URL}/issues?repairer_id=${repairerId}`);
+    if (!res.ok) throw new Error("Failed to fetch repairer issues");
+    return res.json();
   },
 
-  async create(issueData: Omit<Issue, 'id' | 'upvotes' | 'voters' | 'postedDate'>): Promise<Issue> {
-    await delay();
-    // TODO: Replace with actual backend API call
-    const newIssue: Issue = {
-      ...issueData,
-      id: `i${Date.now()}`,
-      postedDate: new Date().toISOString(),
-      upvotes: 0,
-      voters: [],
-    };
-    issuesStore.push(newIssue);
-    return newIssue;
+  async create(issueData: Omit<Issue, "id" | "upvotes" | "voters" | "postedDate">): Promise<Issue> {
+    const res = await fetch(`${BASE_URL}/issues`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(issueData),
+    });
+    if (!res.ok) throw new Error("Failed to create issue");
+    return res.json();
   },
 
   async update(id: string, updates: Partial<Issue>): Promise<Issue | null> {
-    await delay();
-    // TODO: Replace with actual backend API call with RBAC checks
-    const index = issuesStore.findIndex(i => i.id === id);
-    if (index !== -1) {
-      issuesStore[index] = { ...issuesStore[index], ...updates };
-      return issuesStore[index];
-    }
-    return null;
+    const res = await fetch(`${BASE_URL}/issues/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) return null;
+    return res.json();
   },
 
   async delete(id: string): Promise<boolean> {
-    await delay();
-    // TODO: Replace with actual backend API call with RBAC checks
-    // Soft delete: mark as cancelled rather than removing from array
-    const index = issuesStore.findIndex(i => i.id === id);
-    if (index !== -1) {
-      issuesStore[index].status = 'Cancelled';
-      return true;
-    }
-    return false;
+    const res = await fetch(`${BASE_URL}/issues/${id}`, {
+      method: "DELETE",
+    });
+    return res.ok;
   },
 
   async upvote(issueId: string, userId: string): Promise<Issue | null> {
-    await delay();
-    // TODO: Replace with actual backend API call
-    const issue = issuesStore.find(i => i.id === issueId);
-    if (issue && !issue.voters.includes(userId)) {
-      issue.voters.push(userId);
-      issue.upvotes += 1;
-      return issue;
-    }
-    return null;
+    const res = await fetch(`${BASE_URL}/issues/${issueId}/upvote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    if (!res.ok) return null;
+    return res.json();
   },
 
   async downvote(issueId: string, userId: string): Promise<Issue | null> {
-    await delay();
-    // TODO: Replace with actual backend API call
-    const issue = issuesStore.find(i => i.id === issueId);
-    if (issue && issue.voters.includes(userId)) {
-      issue.voters = issue.voters.filter(v => v !== userId);
-      issue.upvotes = Math.max(0, issue.upvotes - 1);
-      return issue;
-    }
-    return null;
+    const res = await fetch(`${BASE_URL}/issues/${issueId}/downvote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    if (!res.ok) return null;
+    return res.json();
   },
 };
 
-// Notices API
+// ------------------- Notices API -------------------
 export const noticesApi = {
   async getAll(): Promise<Notice[]> {
-    await delay();
-    // TODO: Replace with actual backend API call
-    return noticesStore.filter(n => n.isPublic);
+    const res = await fetch(`${BASE_URL}/notices`);
+    if (!res.ok) throw new Error("Failed to fetch notices");
+    return res.json();
   },
 
   async getById(id: string): Promise<Notice | null> {
-    await delay();
-    // TODO: Replace with actual backend API call
-    return noticesStore.find(n => n.id === id) || null;
+    const res = await fetch(`${BASE_URL}/notices/${id}`);
+    if (!res.ok) return null;
+    return res.json();
   },
 
-  async create(noticeData: Omit<Notice, 'id' | 'postedDate'>): Promise<Notice> {
-    await delay();
-    // TODO: Replace with actual backend API call with admin RBAC check
-    const newNotice: Notice = {
-      ...noticeData,
-      id: `n${Date.now()}`,
-      postedDate: new Date().toISOString(),
-    };
-    noticesStore.push(newNotice);
-    return newNotice;
+  async create(noticeData: Omit<Notice, "id" | "postedDate">): Promise<Notice> {
+    const res = await fetch(`${BASE_URL}/notices`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(noticeData),
+    });
+    if (!res.ok) throw new Error("Failed to create notice");
+    return res.json();
   },
 
   async update(id: string, updates: Partial<Notice>): Promise<Notice | null> {
-    await delay();
-    // TODO: Replace with actual backend API call with admin RBAC check
-    const index = noticesStore.findIndex(n => n.id === id);
-    if (index !== -1) {
-      noticesStore[index] = { ...noticesStore[index], ...updates };
-      return noticesStore[index];
-    }
-    return null;
+    const res = await fetch(`${BASE_URL}/notices/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) return null;
+    return res.json();
   },
 
   async delete(id: string): Promise<boolean> {
-    await delay();
-    // TODO: Replace with actual backend API call with admin RBAC check
-    const index = noticesStore.findIndex(n => n.id === id);
-    if (index !== -1) {
-      noticesStore.splice(index, 1);
-      return true;
-    }
-    return false;
+    const res = await fetch(`${BASE_URL}/notices/${id}`, {
+      method: "DELETE",
+    });
+    return res.ok;
   },
 };
 
-// Users API (for admin)
+// ------------------- Users API -------------------
 export const usersApi = {
   async getAll(): Promise<User[]> {
-    await delay();
-    // TODO: Replace with actual backend API call with admin RBAC check
-    return usersStore.map(({ password, ...user }) => user as User);
+    const res = await fetch(`${BASE_URL}/users`);
+    if (!res.ok) throw new Error("Failed to fetch users");
+    return res.json();
   },
 
   async getRepairers(): Promise<User[]> {
-    await delay();
-    // TODO: Replace with actual backend API call
-    return usersStore.filter(u => u.role === 'repairer').map(({ password, ...user }) => user as User);
+    const res = await fetch(`${BASE_URL}/users?role=repairer`);
+    if (!res.ok) throw new Error("Failed to fetch repairers");
+    return res.json();
   },
 };
 
-// Categories API
+// ------------------- Categories API -------------------
 export const categoriesApi = {
   async getAll() {
-    await delay();
-    // TODO: Replace with actual backend API call
-    return categories;
+    const res = await fetch(`${BASE_URL}/categories`);
+    if (!res.ok) throw new Error("Failed to fetch categories");
+    return res.json();
   },
 };
