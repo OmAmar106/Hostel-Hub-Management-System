@@ -16,6 +16,10 @@ import { useEffect, useState } from "react";
 import ProfileAvatar from "@/components/ui/ProfileAvatar";
 import Header from "@/components/ui/Header";
 
+// ✅ Added imports for bus timetable pages
+import BusTimetableView from "@/components/BusTimetableView";
+import BusTimetableAdmin from "@/components/BusTimetableAdmin";
+
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({
@@ -66,22 +70,37 @@ const App = () => {
           <DataProvider>
             <TooltipProvider>
               <Header />
-                <Toaster />
-                <Sonner />
-                <Routes>
-                  <Route path="/" element={<Landing />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/signup" element={<Signup />} />
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <ProtectedRoute allowedRoles={["student", "admin", "worker"]}>
-                        <DashboardRouter />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+              <Toaster />
+              <Sonner />
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute
+                      allowedRoles={["student", "admin", "worker"]}
+                    >
+                      <DashboardRouter />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* ✅ Added Bus Timetable routes */}
+                <Route path="/bus-timetable" element={<BusTimetableView />} />
+                <Route
+                  path="/admin/bus-timetable"
+                  element={
+                    <ProtectedRoute allowedRoles={["admin"]}>
+                      <BusTimetableAdmin />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route path="*" element={<NotFound />} />
+              </Routes>
             </TooltipProvider>
           </DataProvider>
         </AuthProvider>

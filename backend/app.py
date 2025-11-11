@@ -3,20 +3,24 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
-from model import db,User
+from model import db, User
 from auth import auth_bp
 from issues import issues_bp
 from notice import notices_bp
 from dotenv import load_dotenv
-import os
 from workers import workers_bp
 from mess import mess_bp
 from werkzeug.security import generate_password_hash, check_password_hash
 
+
+# ✅ Added import for bus timetable
+from bus_timetable import bus_bp
+
+
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True, expose_headers=["Authorization"],origins=["http://localhost:8080"])
+CORS(app, supports_credentials=True, expose_headers=["Authorization"], origins=["http://localhost:8080"])
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(basedir, "database.db")
@@ -35,6 +39,10 @@ app.register_blueprint(workers_bp)
 app.register_blueprint(issues_bp)
 app.register_blueprint(notices_bp)
 app.register_blueprint(mess_bp)
+
+# ✅ Register the bus timetable endpoints
+app.register_blueprint(bus_bp)
+
 
 @app.get("/api/categories")
 def get_categories():

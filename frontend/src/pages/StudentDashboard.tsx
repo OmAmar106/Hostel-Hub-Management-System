@@ -9,7 +9,7 @@ import { IssueForm } from '@/components/IssueForm';
 import { NoticeBoard } from '@/components/NoticeBoard';
 import { MessBoard } from '@/components/MessBoard';
 import { Issue } from '@/contexts/DataContext';
-import { Home, PlusCircle, Megaphone, LogOut, User, UtensilsCrossed } from 'lucide-react';
+import { Home, PlusCircle, Megaphone, LogOut, User, UtensilsCrossed, Bus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import ProfileAvatar from "@/components/ui/ProfileAvatar";
 import {
@@ -22,13 +22,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import ThemeToggle from "@/components/ui/ThemeToggle"; // ✅ Import the theme toggle
+import ThemeToggle from "@/components/ui/ThemeToggle";
+import BusTimetableView from "@/components/BusTimetableView"; // ✅ Import Bus Timetable
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { issues, notices, messItems, addIssue, deleteIssue } = useData();
-  const [activeTab, setActiveTab] = useState<"all" | "my" | "notices" | "mess">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "my" | "notices" | "mess" | "bus">("all");
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [formModalOpen, setFormModalOpen] = useState(false);
@@ -36,22 +37,18 @@ const StudentDashboard = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [issueToDelete, setIssueToDelete] = useState<number | null>(null);
 
-  // 🔹 Filter issues belonging to current user
   const myIssues = issues.filter((issue) => issue.createdBy === user?.name);
 
-  // 🔹 Logout handler
   const handleLogout = () => {
     logout();
     navigate("/");
   };
 
-  // 🔹 View issue details
   const handleView = (issue: Issue) => {
     setSelectedIssue(issue);
     setViewModalOpen(true);
   };
 
-  // 🔹 Edit issue
   const handleEdit = (issue: Issue) => {
     if (issue.status === "Resolved") {
       toast({
@@ -65,7 +62,6 @@ const StudentDashboard = () => {
     setFormModalOpen(true);
   };
 
-  // 🔹 Delete confirmation
   const handleDeleteClick = (id: number) => {
     setIssueToDelete(id);
     setDeleteDialogOpen(true);
@@ -87,7 +83,6 @@ const StudentDashboard = () => {
     setIssueToDelete(null);
   };
 
-  // 🔹 Open new issue form
   const handleNewIssue = () => {
     setEditingIssue(null);
     setFormModalOpen(true);
@@ -108,7 +103,7 @@ const StudentDashboard = () => {
         </div>
       </header>
 
-      {/* Navigation */}
+      {/* Navigation Tabs */}
       <nav className="border-b bg-white dark:bg-gray-800 dark:border-gray-700">
         <div className="container mx-auto px-4">
           <div className="flex gap-2 overflow-x-auto py-2">
@@ -125,7 +120,6 @@ const StudentDashboard = () => {
               onClick={() => setActiveTab("my")}
               className="gap-2"
             >
-              {/* using icon from lucide-react */}
               <PlusCircle className="h-4 w-4" />
               My Issues
             </Button>
@@ -145,13 +139,21 @@ const StudentDashboard = () => {
               <UtensilsCrossed className="h-4 w-4" />
               Mess Menu
             </Button>
+            {/* ✅ New Bus Timetable Tab */}
+            <Button
+              variant={activeTab === "bus" ? "default" : "ghost"}
+              onClick={() => setActiveTab("bus")}
+              className="gap-2"
+            >
+              <Bus className="h-4 w-4" />
+              Bus Timetable
+            </Button>
           </div>
         </div>
       </nav>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        {/* 🔹 All Issues */}
         {activeTab === "all" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -171,7 +173,6 @@ const StudentDashboard = () => {
           </div>
         )}
 
-        {/* 🔹 My Issues */}
         {activeTab === "my" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -204,19 +205,22 @@ const StudentDashboard = () => {
           </div>
         )}
 
-        {/* 🔹 Notices */}
         {activeTab === "notices" && <NoticeBoard notices={notices} />}
-
-        {/* 🔹 Mess Menu */}
         {activeTab === "mess" && <MessBoard messItems={messItems} />}
+
+        {/* ✅ Bus Timetable Section */}
+        {activeTab === "bus" && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+              Bus Timetable
+            </h2>
+            <BusTimetableView />
+          </div>
+        )}
       </main>
 
       {/* Modals */}
-      <IssueModal
-        issue={selectedIssue}
-        open={viewModalOpen}
-        onOpenChange={setViewModalOpen}
-      />
+      <IssueModal issue={selectedIssue} open={viewModalOpen} onOpenChange={setViewModalOpen} />
       <IssueForm
         open={formModalOpen}
         onOpenChange={setFormModalOpen}
@@ -228,15 +232,12 @@ const StudentDashboard = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Issue</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this issue? This action cannot be
-              undone.
+              Are you sure you want to delete this issue? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>
-              Delete
-            </AlertDialogAction>
+            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
