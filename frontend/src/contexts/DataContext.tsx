@@ -115,12 +115,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIssues(issuesData);
       setCategories(categoriesData);
       setNotices(noticesData);
-<<<<<<< HEAD
       console.log(workersData)
-=======
-      setMessItems(messData);
-
->>>>>>> 4a676afb7b8a27c43150a9ff921623560f85c079
       const repairerList = workersData.filter((w: any) => w.role === "worker");
       // console.log(repairerList)
       setRepairers(repairerList);
