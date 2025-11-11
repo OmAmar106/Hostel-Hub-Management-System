@@ -19,6 +19,7 @@ export interface Issue {
   createdAt: string;
   upvotes: number;
   voters: string[];
+  assignee: string;
 }
 
 export interface Notice {
