@@ -57,7 +57,7 @@ const AdminDashboard = () => {
   const [workers, setWorkers] = useState<any[]>([]);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { issues, notices, messItems, addNotice, updateIssue, deleteNotice, addMessItem, updateMessItem, deleteMessItem } = useData();
+  const { issues, notices, messItems, addNotice, updateIssue, deleteNotice, addMessItem, updateMessItem, deleteMessItem,updateNotice } = useData();
 
   const [activeTab, setActiveTab] = useState<"issues" | "notices" | "workers" | "mess">("issues");
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);

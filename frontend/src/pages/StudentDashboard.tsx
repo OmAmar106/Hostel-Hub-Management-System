@@ -27,7 +27,7 @@ import ThemeToggle from "@/components/ui/ThemeToggle"; // ✅ Import the theme t
 const StudentDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { issues, notices, messItems, addIssue, deleteIssue } = useData();
+  const { issues, notices, messItems, addIssue, deleteIssue, editIssue } = useData();
   const [activeTab, setActiveTab] = useState<"all" | "my" | "notices" | "mess">("all");
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
