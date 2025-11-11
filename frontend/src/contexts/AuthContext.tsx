@@ -96,6 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: form.email,
           password: form.password,
           role: form.role || "student",
+          roomNo: form.roomNo,
         }),
       });
       return res.ok;

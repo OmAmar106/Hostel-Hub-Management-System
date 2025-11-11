@@ -28,7 +28,7 @@ const Login = () => {
           title: 'Login successful',
           description: 'Welcome back!',
         });
-        // Navigate based on role will be handled by App.tsx routing
+
         navigate('/dashboard');
       } else {
         toast({
@@ -88,11 +88,7 @@ const Login = () => {
               {loading ? 'Logging in...' : 'Login'}
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm text-muted-foreground">
-            Demo credentials: student: john@student.com / admin: admin@hostel.com / repairer: mike@repairer.com
-            <br />
-            Password for all: student123 / admin123 / repairer123
-          </div>
+          
           <div className="mt-4 text-center">
             <Button variant="link" onClick={() => navigate('/signup')}>
               Don't have an account? Sign up
@@ -106,6 +102,7 @@ const Login = () => {
         </CardContent>
       </Card>
     </div>
+    
   );
 };
 

@@ -17,14 +17,15 @@ def signup():
     data = request.get_json() or {}
     name, email, pwd = data.get("full_name"), data.get("email"), data.get("password")
     role = (data.get("role") or "student").lower()
-
+    roomNo = (data.get("roomNo") or "")
+    print(roomNo)
     if not name or not email or not pwd:
         return jsonify({"error": "Missing fields"}), 400
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "Email already registered"}), 409
     if role not in ("student",):
         return jsonify({"error": "Invalid role"}), 400
-    user = User(full_name=name, email=email, password_hash=generate_password_hash(pwd), role=role)
+    user = User(full_name=name, email=email, password_hash=generate_password_hash(pwd), role=role,room_no=roomNo)
     db.session.add(user)
     db.session.commit()
     return jsonify({"message": "Account created"}), 201
@@ -93,5 +94,6 @@ def me():
         "id": user.id,
         "name": user.full_name,
         "email": user.email,
-        "role": user.role
+        "role": user.role,
+        "roomNo":user.room_no
     })

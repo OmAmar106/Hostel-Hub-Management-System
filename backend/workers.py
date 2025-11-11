@@ -12,7 +12,7 @@ workers_bp = Blueprint("workers", __name__, url_prefix="/api/workers")
 def get_workers():
     claims = get_jwt()
     if claims.get("role") != "admin":
-        return jsonify({"error": "Admins only"}), 403
+        return jsonify({"error": "Admins only"}), 200
 
     workers = (
         db.session.query(User, WorkerInfo)

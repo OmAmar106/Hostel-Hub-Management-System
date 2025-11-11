@@ -15,6 +15,7 @@ import {
   Trash2,
   Eye,
   Plus,
+  UserPlus,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -52,13 +53,7 @@ const AdminDashboard = () => {
   const [workers, setWorkers] = useState<any[]>([]);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const {
-    issues,
-    notices,
-    addNotice,
-    updateIssue,
-    deleteNotice,
-  } = useData();
+  const { issues, notices, addNotice, updateIssue, deleteNotice } = useData();
 
   const [activeTab, setActiveTab] = useState<"issues" | "notices" | "workers">(
     "issues"
@@ -70,28 +65,73 @@ const AdminDashboard = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [noticeToDelete, setNoticeToDelete] = useState<number | null>(null);
 
+  // 🔹 Logout
   const handleLogout = () => {
     logout();
     navigate("/");
   };
 
+  // 🔹 Open issue modal
   const handleView = (issue: Issue) => {
     setSelectedIssue(issue);
     setViewModalOpen(true);
   };
 
+  // 🔹 Update issue status
   const handleStatusChange = async (
     issueId: number,
     newStatus: Issue["status"]
   ) => {
-    const updates: Partial<Issue> = { status: newStatus };
-    await updateIssue(issueId, updates);
-    toast({
-      title: "Status updated",
-      description: `Issue status changed to ${newStatus}`,
-    });
+    try {
+      const res = await fetch(`${API_BASE}/api/issues/${issueId}/status`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      toast({
+        title: "Status Updated",
+        description: `Issue marked as ${newStatus}`,
+      });
+      await updateIssue(issueId, { status: newStatus });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to update issue status",
+        variant: "destructive",
+      });
+    }
   };
 
+  // 🔹 Assign a worker to an issue
+  const handleAssignWorker = async (issueId: number, workerId: number) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/issues/${issueId}/assign`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+        body: JSON.stringify({ worker_id: workerId }),
+      });
+      if (!res.ok) throw new Error("Failed to assign");
+      toast({
+        title: "Assigned Successfully",
+        description: "Worker assigned to issue.",
+      });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Could not assign worker.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // 🔹 Notice management
   const handleEditNotice = (notice: Notice) => {
     setEditingNotice(notice);
     setNoticeFormOpen(true);
@@ -104,22 +144,15 @@ const AdminDashboard = () => {
 
   const confirmDeleteNotice = async () => {
     if (!noticeToDelete) return;
-
     const success = await deleteNotice(noticeToDelete);
-    if (success) {
-      toast({
-        title: "Notice deleted",
-        description: "Notice has been removed",
-      });
-    } else {
-      toast({
-        title: "Error",
-        description: "Failed to delete notice",
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: success ? "Notice Deleted" : "Error",
+      description: success
+        ? "Notice has been removed"
+        : "Failed to delete notice",
+      variant: success ? "default" : "destructive",
+    });
     setDeleteDialogOpen(false);
-    setNoticeToDelete(null);
   };
 
   const handleNewNotice = () => {
@@ -127,7 +160,7 @@ const AdminDashboard = () => {
     setNoticeFormOpen(true);
   };
 
-  // --- Fetch workers list from backend ---
+  // 🔹 Fetch workers
   const fetchWorkers = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/workers`, {
@@ -136,10 +169,8 @@ const AdminDashboard = () => {
         },
       });
       if (!res.ok) throw new Error("Failed to fetch workers");
-      const data = await res.json();
-      setWorkers(data);
-    } catch (err) {
-      console.error(err);
+      setWorkers(await res.json());
+    } catch {
       toast({
         title: "Error fetching workers",
         description: "Please try again later.",
@@ -149,8 +180,8 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    if (activeTab === "workers") fetchWorkers();
-  }, [activeTab, workerFormOpen]); // refresh after adding a worker
+      fetchWorkers();
+  }, [activeTab, workerFormOpen]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -172,43 +203,29 @@ const AdminDashboard = () => {
 
       {/* Navigation */}
       <nav className="border-b bg-card">
-        <div className="container mx-auto px-4">
-          <div className="flex gap-2">
+        <div className="container mx-auto px-4 flex gap-2">
+          {["issues", "notices", "workers"].map((tab) => (
             <Button
-              variant={activeTab === "issues" ? "default" : "ghost"}
-              onClick={() => setActiveTab("issues")}
+              key={tab}
+              variant={activeTab === tab ? "default" : "ghost"}
+              onClick={() => setActiveTab(tab as any)}
               className="gap-2"
             >
-              <ClipboardList className="h-4 w-4" />
-              All Complaints
+              {tab === "issues" && <ClipboardList className="h-4 w-4" />}
+              {tab === "notices" && <Megaphone className="h-4 w-4" />}
+              {tab === "workers" && <Wrench className="h-4 w-4" />}
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
             </Button>
-            <Button
-              variant={activeTab === "notices" ? "default" : "ghost"}
-              onClick={() => setActiveTab("notices")}
-              className="gap-2"
-            >
-              <Megaphone className="h-4 w-4" />
-              Manage Notices
-            </Button>
-            <Button
-              variant={activeTab === "workers" ? "default" : "ghost"}
-              onClick={() => setActiveTab("workers")}
-              className="gap-2"
-            >
-              <Wrench className="h-4 w-4" />
-              Manage Workers
-            </Button>
-          </div>
+          ))}
         </div>
       </nav>
 
       {/* Main */}
       <main className="container mx-auto px-4 py-8">
+        {/* ISSUES */}
         {activeTab === "issues" && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-foreground">
-              All Complaints
-            </h2>
+            <h2 className="text-2xl font-semibold">All Complaints</h2>
             <Card>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
@@ -220,7 +237,7 @@ const AdminDashboard = () => {
                         <TableHead>Room</TableHead>
                         <TableHead>Title</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Upvotes</TableHead>
+                        <TableHead>Assign</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -252,7 +269,24 @@ const AdminDashboard = () => {
                               </SelectContent>
                             </Select>
                           </TableCell>
-                          <TableCell>{issue.upvotes}</TableCell>
+                          <TableCell>
+                            <Select
+                              onValueChange={(v) =>
+                                handleAssignWorker(issue.id, Number(v))
+                              }
+                            >
+                              <SelectTrigger className="w-[160px]">
+                                <SelectValue placeholder="Assign Worker" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {workers.map((w) => (
+                                  <SelectItem key={w.id} value={String(w.id)}>
+                                    {w.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
                           <TableCell>
                             <Button
                               variant="ghost"
@@ -272,12 +306,11 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* NOTICES */}
         {activeTab === "notices" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold text-foreground">
-                Manage Notices
-              </h2>
+              <h2 className="text-2xl font-semibold">Manage Notices</h2>
               <Button onClick={handleNewNotice}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Notice
@@ -288,13 +321,7 @@ const AdminDashboard = () => {
                 <Card key={notice.id}>
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle>{notice.title}</CardTitle>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Posted:{" "}
-                          {new Date(notice.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
+                      <CardTitle>{notice.title}</CardTitle>
                       <div className="flex gap-2">
                         <Button
                           variant="outline"
@@ -312,6 +339,9 @@ const AdminDashboard = () => {
                         </Button>
                       </div>
                     </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Posted: {new Date(notice.createdAt).toLocaleDateString()}
+                    </p>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-foreground whitespace-pre-wrap">
@@ -324,18 +354,16 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* WORKERS */}
         {activeTab === "workers" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold text-foreground">
-                Manage Workers
-              </h2>
+              <h2 className="text-2xl font-semibold">Manage Workers</h2>
               <Button onClick={() => setWorkerFormOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
+                <UserPlus className="h-4 w-4 mr-2" />
                 Add Worker
               </Button>
             </div>
-
             <div className="grid gap-4">
               {workers.map((worker) => (
                 <Card key={worker.id}>
