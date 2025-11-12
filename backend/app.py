@@ -1,6 +1,6 @@
 import os
 import datetime
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
@@ -15,6 +15,9 @@ from mess import mess_bp
 from werkzeug.security import generate_password_hash, check_password_hash
 from bus_timetable import bus_bp
 from medical import medical_bp
+import requests
+import json
+import re
 
 load_dotenv()
 
@@ -135,6 +138,85 @@ def analytics():
     }
 
     return jsonify({'totals': totals, 'series': series})
+
+@app.route('/analyze_issue', methods=['POST'])
+def analyze_issue():
+    API_KEY = os.getenv("API_KEY")
+    ENDPOINT = "https://api.perplexity.ai/chat/completions"
+
+    try:
+        data = request.get_json()
+        title = data.get("title", "")
+        description = data.get("description", "")
+        text = f"Title: {title}\nDescription: {description}"
+
+        prompt = (
+            "Analyze the following issue and return only a valid JSON object with two keys: "
+            "'sentiment' and 'priority'.\n"
+            "Sentiment must be exactly one of ['Happy', 'Sad', 'Angry'].\n"
+            "Priority must be exactly one of ['High', 'Medium', 'Low'].\n"
+            "No explanations, no extra text.\n\n"
+            f"Issue:\n{text}"
+        )
+
+        payload = {
+            "model": "sonar",
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.3,
+            "max_tokens": 50,
+            "return_citations": False
+        }
+
+        headers = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json"
+        }
+
+        try:
+            resp = requests.post(ENDPOINT, headers=headers, json=payload, timeout=15)
+            resp.raise_for_status()
+            result = resp.json()
+            content = result["choices"][0]["message"]["content"].strip()
+
+            # For testing (remove this block when using real API)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({"sentiment": "Happy", "priority": "Low"}), 500
+
+        # --- CLEAN & PARSE ---
+        content = content.strip()
+        content = re.sub(r"^```(?:json)?", "", content)
+        content = re.sub(r"```$", "", content)
+        content = re.sub(r"^'''(?:json)?", "", content)
+        content = re.sub(r"'''$", "", content)
+        content = content.strip()
+
+        match = re.search(r"\{[\s\S]*\}", content)
+        if match:
+            content = match.group(0).strip()
+
+        try:
+            parsed = json.loads(content)
+            sentiment = parsed.get("sentiment", "Happy")
+            priority = parsed.get("priority", "Low")
+        except Exception as e:
+            print("⚠️ JSON parse failed:", e)
+            print("Problematic content:", repr(content))
+            sentiment, priority = "Happy", "Low"
+
+        # Validate model output strictly
+        if sentiment not in ["Happy", "Sad", "Angry"]:
+            sentiment = "Happy"
+        if priority not in ["High", "Medium", "Low"]:
+            priority = "Low"
+
+        return jsonify({"sentiment": sentiment, "priority": priority})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"sentiment": "Happy", "priority": "Low"}), 500
 
 if __name__ == "__main__":
     with app.app_context():
