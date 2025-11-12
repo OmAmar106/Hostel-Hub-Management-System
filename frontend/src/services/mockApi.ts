@@ -3,7 +3,7 @@
 
 import { User, Issue, Notice } from "./mockData";
 
-const BASE_URL = "http://localhost:5000/api"; // 👈 change if your backend runs elsewhere
+const BASE_URL = "https://hostel-hub-management-system-production.up.railway.app/api"; // 👈 change if your backend runs elsewhere
 
 // ------------------- Auth API -------------------
 export const authApi = {

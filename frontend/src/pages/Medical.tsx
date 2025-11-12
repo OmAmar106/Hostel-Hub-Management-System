@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 
-const API_BASE = "http://localhost:5000";
+const API_BASE = "https://hostel-hub-management-system-production.up.railway.app";
 const TIME_RE = /^([01]?\d|2[0-3]):([0-5]\d)$/;
 
 const Medical = () => {

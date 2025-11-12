@@ -68,7 +68,7 @@ import { Textarea } from "@/components/ui/textarea";
 // Analytics component (from the canvas code)
 import AdminAnalytics from "@/components/AdminAnalytics";
 
-const API_BASE = "http://localhost:5000";
+const API_BASE = "https://hostel-hub-management-system-production.up.railway.app";
 
 const AdminDashboard = () => {
   const [workerFormOpen, setWorkerFormOpen] = useState(false);

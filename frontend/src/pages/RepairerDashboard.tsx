@@ -33,7 +33,7 @@ import ThemeToggle from "@/components/ui/ThemeToggle";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { IssueModal } from "@/components/IssueModal";
 
-const API_BASE = "http://localhost:5000";
+const API_BASE = "https://hostel-hub-management-system-production.up.railway.app";
 
 interface Issue {
   id: number;

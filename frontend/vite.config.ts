@@ -13,12 +13,12 @@ export default defineConfig(({ mode }) => ({
 
     proxy: {
       "/api": {
-        target: "http://localhost:5000",
+        target: "https://hostel-hub-management-system-production.up.railway.app",
         changeOrigin: true,
         secure: false,
       },
       "/auth": {
-        target: "http://localhost:5000",
+        target: "https://hostel-hub-management-system-production.up.railway.app",
         changeOrigin: true,
         secure: false,
       },

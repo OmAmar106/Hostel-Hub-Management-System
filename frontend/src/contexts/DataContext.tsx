@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { toast } from "sonner";
 import { useAuth } from "./AuthContext";
 
-const API_BASE = "http://localhost:5000";
+const API_BASE = "https://hostel-hub-management-system-production.up.railway.app";
 
 export interface Category {
   id: string;
