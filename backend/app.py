@@ -22,7 +22,7 @@ import re
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True, expose_headers=["Authorization"], origins=["https://hostel-hub-management-system.onrender.com/"])
+CORS(app, supports_credentials=True, expose_headers=["Authorization"], origins=["https://hostel-hub-management-system-yzo8.onrender.com/"])
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(basedir, "database.db")
