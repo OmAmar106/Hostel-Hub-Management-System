@@ -71,47 +71,49 @@ export const MessBoard: React.FC<MessBoardProps> = ({ messItems }) => {
                   </TableHead>
                 </TableRow>
               </TableHeader>
-
               <TableBody>
                 {DAYS.map((day) => {
                   const messItem = messMap.get(day);
                   const isToday = day === today;
 
+                  // Helper function to format items by splitting on commas
+                  const formatItems = (text?: string) =>
+                    text ? text.split(',').map(item => item.trim()).join('\n') : '—';
+
                   return (
                     <TableRow
                       key={day}
-                      className={`border-b border-gray-200 dark:border-gray-700 transition-colors ${
-                        isToday
+                      className={`border-b border-gray-200 dark:border-gray-700 transition-colors ${isToday
                           ? 'bg-blue-50 dark:bg-blue-900/30'
                           : 'bg-white even:bg-gray-50 dark:bg-gray-800'
-                      } hover:bg-gray-100 dark:hover:bg-gray-700`}
+                        } hover:bg-gray-100 dark:hover:bg-gray-700`}
                     >
                       <TableCell
-                        className={`py-4 px-4 font-medium ${
-                          isToday
+                        className={`py-4 px-4 font-medium ${isToday
                             ? 'text-blue-700 dark:text-blue-300 font-semibold'
                             : 'text-gray-900 dark:text-gray-100'
-                        }`}
+                          }`}
                       >
                         {day}
                       </TableCell>
 
                       <TableCell className="py-4 px-4 text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                        {messItem?.breakfast || '—'}
+                        {formatItems(messItem?.breakfast)}
                       </TableCell>
                       <TableCell className="py-4 px-4 text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                        {messItem?.lunch || '—'}
+                        {formatItems(messItem?.lunch)}
                       </TableCell>
                       <TableCell className="py-4 px-4 text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                        {messItem?.snacks || '—'}
+                        {formatItems(messItem?.snacks)}
                       </TableCell>
                       <TableCell className="py-4 px-4 text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                        {messItem?.dinner || '—'}
+                        {formatItems(messItem?.dinner)}
                       </TableCell>
                     </TableRow>
                   );
                 })}
               </TableBody>
+
             </Table>
           </div>
         </CardContent>

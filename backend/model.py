@@ -50,3 +50,19 @@ class Mess(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     __table_args__ = (db.UniqueConstraint('day', name='unique_day'),)
+
+
+class Doctor(db.Model):
+    __tablename__ = 'doctor'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    available_today = db.Column(db.Boolean, nullable=False, default=False)
+    arrival_time = db.Column(db.String(10), nullable=True)  # store as HH:MM
+    leave_time = db.Column(db.String(10), nullable=True)
+
+class StudentMedical(db.Model):
+    __tablename__ = 'student_medical'
+    id = db.Column(db.Integer, primary_key=True)
+    student_name = db.Column(db.String(150), nullable=False)
+    email = db.Column(db.String(120), nullable=False)
+    prescribed_medicine = db.Column(db.Text, nullable=True)

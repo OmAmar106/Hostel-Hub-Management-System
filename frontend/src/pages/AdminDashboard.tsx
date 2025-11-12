@@ -19,6 +19,7 @@ import {
   Plus,
   UserPlus,
   UtensilsCrossed,
+  Bandage,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -50,6 +51,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkerForm } from "@/components/WorkerForm";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 
+// ADD: dialog, input, label components
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+
 const API_BASE = "http://localhost:5000";
 
 const AdminDashboard = () => {
@@ -57,15 +64,38 @@ const AdminDashboard = () => {
   const [workers, setWorkers] = useState<any[]>([]);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { issues, notices, messItems, addNotice, updateIssue, deleteNotice, addMessItem, updateMessItem, deleteMessItem,updateNotice } = useData();
+  const { issues, notices, messItems, addNotice, updateIssue, deleteNotice, addMessItem, updateMessItem, deleteMessItem, updateNotice, doctors, addDoctor, updateDoctor, deleteDoctor, studentRecords, addStudentRecord, updateStudentRecord, deleteStudentRecord } = useData();
 
-  const [activeTab, setActiveTab] = useState<"issues" | "notices" | "workers" | "mess">("issues");
+
+  const [activeTab, setActiveTab] = useState<"issues" | "notices" | "workers" | "mess"| "medical">("issues");
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [noticeFormOpen, setNoticeFormOpen] = useState(false);
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [noticeToDelete, setNoticeToDelete] = useState<number | null>(null);
+
+  // --- New state for medical add/edit/delete UI ---
+  const [addDoctorOpen, setAddDoctorOpen] = useState(false);
+  const [editingDoctorId, setEditingDoctorId] = useState<number | null>(null);
+  const [doctorForm, setDoctorForm] = useState<{ name: string; availableToday: boolean; arrivalTime: string; leaveTime: string }>({
+    name: "",
+    availableToday: false,
+    arrivalTime: "",
+    leaveTime: "",
+  });
+
+  const [addStudentOpen, setAddStudentOpen] = useState(false);
+  const [editingStudentId, setEditingStudentId] = useState<number | null>(null);
+  const [studentForm, setStudentForm] = useState<{ studentName: string; email: string; prescribedMedicine: string }>({
+    studentName: "",
+    email: "",
+    prescribedMedicine: "",
+  });
+
+  const [medDeleteDialogOpen, setMedDeleteDialogOpen] = useState(false);
+  const [medDeleteTarget, setMedDeleteTarget] = useState<{ type: "doctor" | "student"; id: number | null } | null>(null);
+  // --- end medical UI state ---
 
   // 🔹 Logout
   const handleLogout = () => {
@@ -208,6 +238,174 @@ const AdminDashboard = () => {
   // helper for safe string comparison
   const normalize = (s?: any) => (s === undefined || s === null ? "" : String(s).trim().toLowerCase());
 
+  // Helper to open doctor edit row and prefill
+  const startEditDoctor = (d: any) => {
+    setEditingDoctorId(d.id);
+    setDoctorForm({
+      name: d.name || "",
+      availableToday: !!d.availableToday,
+      arrivalTime: d.arrivalTime || "",
+      leaveTime: d.leaveTime || "",
+    });
+  };
+
+  const cancelEditDoctor = () => {
+    setEditingDoctorId(null);
+    setDoctorForm({ name: "", availableToday: false, arrivalTime: "", leaveTime: "" });
+  };
+
+  const saveDoctorEdits = async (id: number | null) => {
+  if (!id) return;
+  try {
+    if (!updateDoctor) throw new Error("updateDoctor not available");
+    const ok = await updateDoctor(id, {
+      name: doctorForm.name,
+      availableToday: doctorForm.availableToday,
+      arrivalTime: doctorForm.arrivalTime,
+      leaveTime: doctorForm.leaveTime,
+    });
+    if (ok) {
+      // fetchAllData called inside DataContext; just close editor
+      cancelEditDoctor();
+    } else {
+      toast({
+        title: "Failed to update",
+        description: "Could not save doctor. See console for details.",
+        variant: "destructive",
+      });
+    }
+  } catch (err: any) {
+    console.error(err);
+    toast({
+      title: "Error",
+      description: err?.message || "Failed to update doctor",
+      variant: "destructive",
+    });
+  }
+};
+
+
+  const submitNewDoctor = async () => {
+    try {
+      if (!addDoctor) throw new Error("addDoctor not available");
+      const ok = await addDoctor({
+        name: doctorForm.name,
+        availableToday: doctorForm.availableToday,
+        arrivalTime: doctorForm.arrivalTime,
+        leaveTime: doctorForm.leaveTime,
+      });
+      if (ok) {
+        setAddDoctorOpen(false);
+        setDoctorForm({ name: "", availableToday: false, arrivalTime: "", leaveTime: "" });
+      } else {
+        toast({
+          title: "Failed to add",
+          description: "Could not add doctor. See console for details.",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Error", description: err?.message || "Failed to add doctor", variant: "destructive" });
+    }
+  };
+
+  // Student record helpers
+  const startEditStudent = (s: any) => {
+    setEditingStudentId(s.id);
+    setStudentForm({
+      studentName: s.studentName || "",
+      email: s.email || "",
+      prescribedMedicine: s.prescribedMedicine || "",
+    });
+  };
+
+  const cancelEditStudent = () => {
+    setEditingStudentId(null);
+    setStudentForm({ studentName: "", email: "", prescribedMedicine: "" });
+  };
+
+  const saveStudentEdits = async (id: number | null) => {
+  if (!id) return;
+  try {
+    if (!updateStudentRecord) throw new Error("updateStudentRecord not available");
+    const ok = await updateStudentRecord(id, {
+      studentName: studentForm.studentName,
+      email: studentForm.email,
+      prescribedMedicine: studentForm.prescribedMedicine,
+    });
+    if (ok) {
+      cancelEditStudent();
+    } else {
+      toast({
+        title: "Failed to update",
+        description: "Could not update student record. See console for details.",
+        variant: "destructive",
+      });
+    }
+  } catch (err: any) {
+    console.error(err);
+    toast({ title: "Error", description: err?.message || "Failed to update record", variant: "destructive" });
+  }
+};
+
+
+  const submitNewStudent = async () => {
+    try {
+      if (!addStudentRecord) throw new Error("addStudentRecord not available");
+      const ok = await addStudentRecord({
+        studentName: studentForm.studentName,
+        email: studentForm.email,
+        prescribedMedicine: studentForm.prescribedMedicine,
+      });
+      if (ok) {
+        setAddStudentOpen(false);
+        setStudentForm({ studentName: "", email: "", prescribedMedicine: "" });
+      } else {
+        toast({
+          title: "Failed to add",
+          description: "Could not add student record. See console for details.",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Error", description: err?.message || "Failed to add student record", variant: "destructive" });
+    }
+  };
+
+  // Open deletion confirmation for doctor/student
+  const requestMedDelete = (type: "doctor" | "student", id: number) => {
+    setMedDeleteTarget({ type, id });
+    setMedDeleteDialogOpen(true);
+  };
+
+  const confirmMedDelete = async () => {
+    if (!medDeleteTarget) return;
+    const { type, id } = medDeleteTarget;
+    try {
+      if (type === "doctor") {
+        if (!deleteDoctor) throw new Error("deleteDoctor not available");
+        const ok = await deleteDoctor(id as number);
+        if (!ok) {
+          toast({ title: "Delete failed", description: "Could not delete doctor", variant: "destructive" });
+        }
+      } else {
+        if (!deleteStudentRecord) throw new Error("deleteStudentRecord not available");
+        const ok = await deleteStudentRecord(id as number);
+        if (!ok) {
+          toast({ title: "Delete failed", description: "Could not delete student record", variant: "destructive" });
+        }
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Error", description: err?.message || "Delete failed", variant: "destructive" });
+    } finally {
+      setMedDeleteDialogOpen(false);
+      setMedDeleteTarget(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
       <header className="border-b bg-white dark:bg-gray-800 dark:border-gray-700">
@@ -256,6 +454,14 @@ const AdminDashboard = () => {
                     : "Manage Mess"}
               </Button>
             ))}
+            <Button
+              variant={activeTab === "medical" ? "default" : "ghost"}
+              onClick={() => setActiveTab("medical")}
+              className="gap-2"
+            >
+              <Bandage className="h-4 w-4" />
+              Medical
+            </Button>
           </div>
         </div>
       </nav>
@@ -557,6 +763,238 @@ const AdminDashboard = () => {
             onUpdate={updateMessItem}
           />
         )}
+        {activeTab === "medical" && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+              Medical — Manage Doctors & Student Records
+            </h2>
+
+            {/* Doctors table (editable) */}
+            <Card className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle>Doctors</CardTitle>
+                  <div className="flex gap-2">
+                    <Button onClick={() => { setAddDoctorOpen(true); setDoctorForm({ name: "", availableToday: false, arrivalTime: "", leaveTime: "" }); }}>
+                      <Plus className="h-4 w-4 mr-2" /> Add Doctor
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead>
+                      <tr className="text-left">
+                        <th className="p-3">Name</th>
+                        <th className="p-3">Available Today</th>
+                        <th className="p-3">Arrival Time</th>
+                        <th className="p-3">Leave Time</th>
+                        <th className="p-3">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(doctors || []).map((d: any) => (
+                        <tr key={d.id} className="border-t">
+                          {editingDoctorId === d.id ? (
+                            <>
+                              <td className="p-3">
+                                <Input value={doctorForm.name} onChange={(e) => setDoctorForm({ ...doctorForm, name: e.target.value })} />
+                              </td>
+                              <td className="p-3">
+                                <label className="inline-flex items-center">
+                                  <input type="checkbox" checked={doctorForm.availableToday} onChange={(e) => setDoctorForm({ ...doctorForm, availableToday: e.target.checked })} className="mr-2" />
+                                  <span className="text-sm">{doctorForm.availableToday ? "Yes" : "No"}</span>
+                                </label>
+                              </td>
+                              <td className="p-3">
+                                <Input value={doctorForm.arrivalTime} onChange={(e) => setDoctorForm({ ...doctorForm, arrivalTime: e.target.value })} />
+                              </td>
+                              <td className="p-3">
+                                <Input value={doctorForm.leaveTime} onChange={(e) => setDoctorForm({ ...doctorForm, leaveTime: e.target.value })} />
+                              </td>
+                              <td className="p-3">
+                                <div className="flex gap-2">
+                                  <Button size="sm" onClick={() => saveDoctorEdits(d.id)}>Save</Button>
+                                  <Button size="sm" variant="outline" onClick={cancelEditDoctor}>Cancel</Button>
+                                </div>
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="p-3">{d.name}</td>
+                              <td className="p-3">{d.availableToday ? "Yes" : "No"}</td>
+                              <td className="p-3">{d.arrivalTime}</td>
+                              <td className="p-3">{d.leaveTime}</td>
+                              <td className="p-3">
+                                <div className="flex gap-2">
+                                  <Button size="sm" variant="outline" onClick={() => startEditDoctor(d)}>Edit</Button>
+                                  <Button size="sm" variant="destructive" onClick={() => requestMedDelete("doctor", d.id)}>Delete</Button>
+                                </div>
+                              </td>
+                            </>
+                          )}
+                        </tr>
+                      ))}
+                      {(!doctors || doctors.length === 0) && (
+                        <tr><td colSpan={5} className="p-4 text-center text-gray-500">No doctors found</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Student Records table (editable, admin-only) */}
+            <Card className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle>Student Records (Prescribed Medicine)</CardTitle>
+                  <div className="flex gap-2">
+                    <Button onClick={() => { setAddStudentOpen(true); setStudentForm({ studentName: "", email: "", prescribedMedicine: "" }); }}>
+                      <Plus className="h-4 w-4 mr-2" /> Add Record
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead>
+                      <tr className="text-left">
+                        <th className="p-3">Student Name</th>
+                        <th className="p-3">Email</th>
+                        <th className="p-3">Prescribed Medicine</th>
+                        <th className="p-3">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(studentRecords || []).map((s: any) => (
+                        <tr key={s.id} className="border-t">
+                          {editingStudentId === s.id ? (
+                            <>
+                              <td className="p-3">
+                                <Input value={studentForm.studentName} onChange={(e) => setStudentForm({ ...studentForm, studentName: e.target.value })} />
+                              </td>
+                              <td className="p-3">
+                                <Input value={studentForm.email} onChange={(e) => setStudentForm({ ...studentForm, email: e.target.value })} />
+                              </td>
+                              <td className="p-3">
+                                <Textarea value={studentForm.prescribedMedicine} onChange={(e) => setStudentForm({ ...studentForm, prescribedMedicine: e.target.value })} rows={3} />
+                              </td>
+                              <td className="p-3">
+                                <div className="flex gap-2">
+                                  <Button size="sm" onClick={() => saveStudentEdits(s.id)}>Save</Button>
+                                  <Button size="sm" variant="outline" onClick={cancelEditStudent}>Cancel</Button>
+                                </div>
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="p-3">{s.studentName}</td>
+                              <td className="p-3">{s.email}</td>
+                              <td className="p-3 whitespace-pre-wrap">{s.prescribedMedicine}</td>
+                              <td className="p-3">
+                                <div className="flex gap-2">
+                                  <Button size="sm" variant="outline" onClick={() => startEditStudent(s)}>Edit</Button>
+                                  <Button size="sm" variant="destructive" onClick={() => requestMedDelete("student", s.id)}>Delete</Button>
+                                </div>
+                              </td>
+                            </>
+                          )}
+                        </tr>
+                      ))}
+                      {(!studentRecords || studentRecords.length === 0) && (
+                        <tr><td colSpan={4} className="p-4 text-center text-gray-500">No student records found</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Add Doctor Dialog */}
+            <Dialog open={addDoctorOpen} onOpenChange={setAddDoctorOpen}>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Add Doctor</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                  <div>
+                    <Label>Name</Label>
+                    <Input value={doctorForm.name} onChange={(e) => setDoctorForm({ ...doctorForm, name: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Available Today</Label>
+                    <div className="mt-1">
+                      <label className="inline-flex items-center">
+                        <input type="checkbox" checked={doctorForm.availableToday} onChange={(e) => setDoctorForm({ ...doctorForm, availableToday: e.target.checked })} className="mr-2" />
+                        <span className="text-sm">{doctorForm.availableToday ? "Yes" : "No"}</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Arrival Time</Label>
+                    <Input value={doctorForm.arrivalTime} onChange={(e) => setDoctorForm({ ...doctorForm, arrivalTime: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Leave Time</Label>
+                    <Input value={doctorForm.leaveTime} onChange={(e) => setDoctorForm({ ...doctorForm, leaveTime: e.target.value })} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setAddDoctorOpen(false)}>Cancel</Button>
+                  <Button onClick={submitNewDoctor}>Add Doctor</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Add Student Dialog */}
+            <Dialog open={addStudentOpen} onOpenChange={setAddStudentOpen}>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Add Student Record</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                  <div>
+                    <Label>Student Name</Label>
+                    <Input value={studentForm.studentName} onChange={(e) => setStudentForm({ ...studentForm, studentName: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Email</Label>
+                    <Input value={studentForm.email} onChange={(e) => setStudentForm({ ...studentForm, email: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Prescribed Medicine</Label>
+                    <Textarea value={studentForm.prescribedMedicine} onChange={(e) => setStudentForm({ ...studentForm, prescribedMedicine: e.target.value })} rows={4} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setAddStudentOpen(false)}>Cancel</Button>
+                  <Button onClick={submitNewStudent}>Add Record</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Deletion confirmation for doctors/students */}
+            <AlertDialog open={medDeleteDialogOpen} onOpenChange={setMedDeleteDialogOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirm Delete</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete this {medDeleteTarget?.type === "doctor" ? "doctor" : "student record"}? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={confirmMedDelete}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+          </div>
+        )}
+
       </main>
 
       <IssueModal

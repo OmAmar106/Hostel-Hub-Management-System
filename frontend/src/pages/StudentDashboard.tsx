@@ -9,7 +9,7 @@ import { IssueForm } from '@/components/IssueForm';
 import { NoticeBoard } from '@/components/NoticeBoard';
 import { MessBoard } from '@/components/MessBoard';
 import { Issue } from '@/contexts/DataContext';
-import { Home, PlusCircle, Megaphone, LogOut, User, UtensilsCrossed, Bus } from 'lucide-react';
+import { Home, PlusCircle, Megaphone, LogOut, User, UtensilsCrossed, Bus, Bandage } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import ProfileAvatar from "@/components/ui/ProfileAvatar";
 import {
@@ -28,8 +28,8 @@ import BusTimetableView from "@/components/BusTimetableView"; // ✅ Import Bus 
 const StudentDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<"all" | "my" | "notices" | "mess" | "bus">("all");
-  const { issues, notices, messItems, addIssue, deleteIssue, editIssue } = useData();
+  const [activeTab, setActiveTab] = useState<"all" | "my" | "notices" | "mess" | "bus" | "medical">("all");
+  const { issues, notices, messItems, addIssue, deleteIssue, updateIssue, doctors } = useData();
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [formModalOpen, setFormModalOpen] = useState(false);
@@ -147,6 +147,14 @@ const StudentDashboard = () => {
               <Bus className="h-4 w-4" />
               Bus Timetable
             </Button>
+            <Button
+              variant={activeTab === "medical" ? "default" : "ghost"}
+              onClick={() => setActiveTab("medical")}
+              className="gap-2"
+            >
+              <Bandage className="h-4 w-4" />
+              Medical
+            </Button>
           </div>
         </div>
       </nav>
@@ -214,6 +222,52 @@ const StudentDashboard = () => {
             <BusTimetableView />
           </div>
         )}
+
+        {/* ---------- Medical Tab (student view - read-only) ---------- */}
+        {activeTab === "medical" && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+              Medical Facility
+            </h2>
+
+            {/* Replace this static table with your doctors state / API data */}
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white dark:bg-gray-800 rounded-md overflow-hidden border">
+                <thead>
+                  <tr className="bg-gray-100 dark:bg-gray-700 text-left">
+                    <th className="p-3">Doctor Name</th>
+                    <th className="p-3">Available Today</th>
+                    <th className="p-3">Arrival Time</th>
+                    <th className="p-3">Leave Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(!doctors || doctors.length === 0) ? (
+                    <tr>
+                      <td colSpan={4} className="p-3 text-center text-gray-500 dark:text-gray-400">
+                        No doctors available at the moment.
+                      </td>
+                    </tr>
+                  ) : (
+                    doctors.map((doctor) => (
+                      <tr key={doctor.id} className="border-t border-gray-200 dark:border-gray-700">
+                        <td className="p-3">{doctor.name}</td>
+                        <td className="p-3">
+                          <span className={doctor.availableToday ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
+                            {doctor.availableToday ? "Yes" : "No"}
+                          </span>
+                        </td>
+                        <td className="p-3">{doctor.arrivalTime || "N/A"}</td>
+                        <td className="p-3">{doctor.leaveTime || "N/A"}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+
+              </table>
+            </div>
+          </div>
+        )}
       </main>
 
       <IssueModal issue={selectedIssue} open={viewModalOpen} onOpenChange={setViewModalOpen} />
@@ -222,7 +276,6 @@ const StudentDashboard = () => {
         onOpenChange={setFormModalOpen}
         issue={editingIssue}
         addIssue={addIssue}
-        editIssue={editIssue}
       />
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

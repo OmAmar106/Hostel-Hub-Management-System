@@ -13,6 +13,7 @@ from mess import mess_bp
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from bus_timetable import bus_bp
+from medical import medical_bp
 
 
 load_dotenv()
@@ -39,6 +40,7 @@ app.register_blueprint(notices_bp)
 app.register_blueprint(mess_bp)
 
 app.register_blueprint(bus_bp)
+app.register_blueprint(medical_bp)
 
 
 @app.get("/api/categories")

@@ -46,6 +46,22 @@ export interface Repairer {
   name: string;
 }
 
+export interface Doctor {
+  id: number;
+  name: string;
+  availableToday: boolean;
+  arrivalTime: string;
+  leaveTime: string;
+}
+
+export interface StudentRecord {
+  id: number;
+  studentName: string;
+  email: string;
+  prescribedMedicine: string;
+}
+
+
 interface DataContextType {
   issues: Issue[];
   notices: Notice[];
@@ -53,6 +69,18 @@ interface DataContextType {
   categories: Category[];
   repairers: Repairer[];
   loading: boolean;
+
+  // doctors & student records (medical)
+  doctors: Doctor[];
+  addDoctor: (payload: Partial<Doctor>) => Promise<boolean>;
+  updateDoctor: (doctorId: number, updates: Partial<Doctor>) => Promise<boolean>;
+  deleteDoctor: (doctorId: number) => Promise<boolean>;
+
+  studentRecords: StudentRecord[];
+  addStudentRecord: (payload: Partial<StudentRecord>) => Promise<boolean>;
+  updateStudentRecord: (recordId: number, updates: Partial<StudentRecord>) => Promise<boolean>;
+  deleteStudentRecord: (recordId: number) => Promise<boolean>;
+
   addIssue: (issue: any) => Promise<void>;
   addNotice: (notice: any) => Promise<void>;
   addMessItem: (messItem: any) => Promise<void>;
@@ -67,6 +95,7 @@ interface DataContextType {
   downvoteIssue: (issueId: number) => Promise<void>;
 }
 
+
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -78,24 +107,51 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [categories, setCategories] = useState<Category[]>([]);
   const [repairers, setRepairers] = useState<Repairer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [studentRecords, setStudentRecords] = useState<StudentRecord[]>([]);
+
 
   const headers = token
     ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
     : { "Content-Type": "application/json" };
 
+  // Helper that never throws — returns structured result even on network error
+  const safeFetch = async (url: string, opts: RequestInit = {}) => {
+    try {
+      const res = await fetch(url, opts);
+      const json = await res.json().catch(() => null);
+      return { ok: res.ok, status: res.status, json, res };
+    } catch (err) {
+      console.error("safeFetch network error for", url, err);
+      return { ok: false, status: 0, json: null, error: err };
+    }
+  };
+
   const fetchAllData = async () => {
     try {
       setLoading(true);
 
-      const [issuesRes, categoriesRes, noticesRes, workersRes, messRes] = await Promise.all([
-        fetch(`${API_BASE}/api/issues`, { headers }),
-        fetch(`${API_BASE}/api/categories`, { headers }),
-        fetch(`${API_BASE}/api/notices`, { headers }),
-        fetch(`${API_BASE}/api/workers`, { headers }),
-        fetch(`${API_BASE}/api/mess`, { headers }),
-      ]);
-
-      if ([issuesRes, categoriesRes, noticesRes, workersRes, messRes].some(r => r.status === 401 || r.status === 422)) {
+      // fire all requests in parallel but use safeFetch so one failure doesn't reject Promise.all
+      const [
+      issuesRes,
+      categoriesRes,
+      noticesRes,
+      workersRes,
+      messRes,
+      doctorsRes,
+      studentRecordsRes,
+    ] = await Promise.all([
+      safeFetch(`${API_BASE}/api/issues`, { headers }),
+      safeFetch(`${API_BASE}/api/categories`, { headers }),
+      safeFetch(`${API_BASE}/api/notices`, { headers }),
+      safeFetch(`${API_BASE}/api/workers`, { headers }),
+      safeFetch(`${API_BASE}/api/mess`, { headers }),
+      safeFetch(`${API_BASE}/api/medical/doctors`, { headers }),
+      safeFetch(`${API_BASE}/api/medical/student-records`, { headers }), // Corrected URL
+    ]);
+      // handle auth errors centrally
+      const responses = [issuesRes, categoriesRes, noticesRes, workersRes, messRes, doctorsRes, studentRecordsRes];
+      if (responses.some(r => r && (r.status === 401 || r.status === 422))) {
         toast.error("Session expired. Please log in again.");
         localStorage.removeItem("access_token");
         sessionStorage.removeItem("user");
@@ -103,32 +159,85 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
 
-      if (![issuesRes.ok, categoriesRes.ok, noticesRes.ok, workersRes.ok, messRes.ok].every(Boolean))
-        throw new Error("Failed to fetch some resources");
+      // For each resource, if response ok -> use json, if 404 -> treat as empty list, if other error -> log and throw
+      if (issuesRes.ok && issuesRes.json) setIssues(issuesRes.json);
+      else {
+        console.warn("issues fetch issue:", issuesRes.status);
+        setIssues([]);
+      }
 
-      const [issuesData, categoriesData, noticesData, workersData, messData] = await Promise.all([
-        issuesRes.json(),
-        categoriesRes.json(),
-        noticesRes.json(),
-        workersRes.json(),
-        messRes.json(),
-      ]);
+      if (categoriesRes.ok && categoriesRes.json) setCategories(categoriesRes.json);
+      else {
+        console.warn("categories fetch issue:", categoriesRes.status);
+        setCategories([]);
+      }
 
-      setIssues(issuesData);
-      setCategories(categoriesData);
-      setNotices(noticesData);
-      console.log(workersData)
-      const repairerList = workersData.filter((w: any) => w.role === "worker");
-      // console.log(repairerList)
-      setRepairers(repairerList);
-      setMessItems(messData);
-    } catch (err) {
-      console.error("fetchAllData error:", err);
-      // toast.error("Failed to fetch data from server");
-    } finally {
-      setLoading(false);
+      if (noticesRes.ok && noticesRes.json) setNotices(noticesRes.json);
+      else {
+        console.warn("notices fetch issue:", noticesRes.status);
+        setNotices([]);
+      }
+
+      if (workersRes.ok && workersRes.json) {
+        const workersData = workersRes.json;
+        const repairerList = Array.isArray(workersData) ? workersData.filter((w: any) => w.role === "worker") : [];
+        setRepairers(repairerList);
+      } else {
+        console.warn("workers fetch issue:", workersRes.status);
+        setRepairers([]);
+      }
+
+      if (messRes.ok && messRes.json) setMessItems(messRes.json);
+      else {
+        console.warn("mess fetch issue:", messRes.status);
+        setMessItems([]);
+      }
+
+      // doctors endpoint exists in your logs; if missing/404 -> set empty array
+      if (doctorsRes.ok && doctorsRes.json) {
+      // Transform doctor data to camelCase for frontend
+      setDoctors(
+        doctorsRes.json.map((d: any) => ({
+          id: d.id,
+          name: d.name,
+          availableToday: d.available_today, // Mapped
+          arrivalTime: d.arrival_time,       // Mapped
+          leaveTime: d.leave_time,         // Mapped
+        }))
+      );
+    } else if (doctorsRes.status === 404) {
+      console.info("doctors endpoint not found (404) — continuing with empty doctors list");
+      setDoctors([]);
+    } else {
+      console.warn("doctors fetch issue:", doctorsRes.status, doctorsRes.error ?? "");
+      setDoctors([]);
     }
-  };
+
+    if (studentRecordsRes.ok && studentRecordsRes.json) {
+      // Transform student records data to camelCase for frontend
+      setStudentRecords(
+        studentRecordsRes.json.map((r: any) => ({
+          id: r.id,
+          studentName: r.student_name,          // Mapped
+          email: r.email,
+          prescribedMedicine: r.prescribed_medicine, // Mapped
+        }))
+      );
+    } else if (studentRecordsRes.status === 404) {
+      console.info("student-records endpoint returned 404 — continuing with empty studentRecords list");
+      setStudentRecords([]);
+    } else {
+      console.warn("student-records fetch issue:", studentRecordsRes.status, studentRecordsRes.error ?? "");
+      setStudentRecords([]);
+    }
+
+  } catch (err) {
+    console.error("fetchAllData error:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+// ...existing code...
 
   // Issue Operations
   const addIssue = async (issueData: any) => {
@@ -376,7 +485,171 @@ const updateNotice = async (noticeId: number, updates: Partial<Notice>) => {
       return false;
     }
   };
+  // Doctors (medical)
+// Inside DataProvider in DataContext.tsx
 
+// Doctors (medical)
+const addDoctor = async (payload: Partial<Doctor>) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/medical/doctors`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        name: payload.name,
+        available_today: payload.availableToday, // Change here
+        arrival_time: payload.arrivalTime, // Change here
+        leave_time: payload.leaveTime, // Change here
+      }),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+      const msg = json?.error || json?.message || `Failed to add doctor (HTTP ${res.status})`;
+      console.error("addDoctor failed:", msg, json);
+      toast.error(msg);
+      return false;
+    }
+    await fetchAllData();
+    toast.success("Doctor added");
+    return true;
+  } catch (err) {
+    console.error("addDoctor error:", err);
+    toast.error("Failed to add doctor");
+    return false;
+  }
+};
+
+const updateDoctor = async (doctorId: number, updates: Partial<Doctor>) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/medical/doctors/${doctorId}`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({
+        name: updates.name,
+        available_today: updates.availableToday, // Change here
+        arrival_time: updates.arrivalTime, // Change here
+        leave_time: updates.leaveTime, // Change here
+      }),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+      const msg = json?.error || json?.message || `Failed to update doctor (HTTP ${res.status})`;
+      console.error("updateDoctor failed:", msg, json);
+      toast.error(msg);
+      return false;
+    }
+    await fetchAllData();
+    toast.success("Doctor updated");
+    return true;
+  } catch (err) {
+    console.error("updateDoctor error:", err);
+    toast.error("Failed to update doctor");
+    return false;
+  }
+};
+ const deleteDoctor = async (doctorId: number) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/medical/doctors/${doctorId}`, {
+      method: "DELETE",
+      headers,
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+      const msg = json?.error || json?.message || `Failed to delete doctor (HTTP ${res.status})`;
+      console.error("deleteDoctor failed:", msg, json);
+      toast.error(msg);
+      return false;
+    }
+    await fetchAllData();
+    toast.success("Doctor deleted");
+    return true;
+  } catch (err) {
+    console.error("deleteDoctor error:", err);
+    toast.error("Failed to delete doctor");
+    return false;
+  }
+ };
+ 
+ // Inside DataProvider in DataContext.tsx
+
+// Student Records (admin-only)
+const addStudentRecord = async (payload: Partial<StudentRecord>) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/medical/student-records`, { // Corrected URL
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        student_name: payload.studentName, // Change here
+        email: payload.email,
+        prescribed_medicine: payload.prescribedMedicine, // Change here
+      }),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+      const msg = json?.error || json?.message || `Failed to add student record (HTTP ${res.status})`;
+      console.error("addStudentRecord failed:", msg, json);
+      toast.error(msg);
+      return false;
+    }
+    await fetchAllData();
+    toast.success("Student record added");
+    return true;
+  } catch (err) {
+    console.error("addStudentRecord error:", err);
+    toast.error("Failed to add student record");
+    return false;
+  }
+};
+
+const updateStudentRecord = async (recordId: number, updates: Partial<StudentRecord>) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/medical/student-records/${recordId}`, { // Corrected URL
+      method: "PUT",
+      headers,
+      body: JSON.stringify({
+        student_name: updates.studentName, // Change here
+        email: updates.email,
+        prescribed_medicine: updates.prescribedMedicine, // Change here
+      }),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+      const msg = json?.error || json?.message || `Failed to update student record (HTTP ${res.status})`;
+      console.error("updateStudentRecord failed:", msg, json);
+      toast.error(msg);
+      return false;
+    }
+    await fetchAllData();
+    toast.success("Student record updated");
+    return true;
+  } catch (err) {
+    console.error("updateStudentRecord error:", err);
+    toast.error("Failed to update student record");
+    return false;
+  }
+};
+ const deleteStudentRecord = async (recordId: number) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/medical/student-records/${recordId}`, {
+      method: "DELETE",
+      headers,
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+      const msg = json?.error || json?.message || `Failed to delete student record (HTTP ${res.status})`;
+      console.error("deleteStudentRecord failed:", msg, json);
+      toast.error(msg);
+      return false;
+    }
+    await fetchAllData();
+    toast.success("Student record deleted");
+    return true;
+  } catch (err) {
+    console.error("deleteStudentRecord error:", err);
+    toast.error("Failed to delete student record");
+    return false;
+  }
+ };
+ 
   useEffect(() => {
     // fetch data if token exists (logged in) or, optionally, always fetch public data
     if (token) fetchAllData();
@@ -384,29 +657,43 @@ const updateNotice = async (noticeId: number, updates: Partial<Notice>) => {
 
   return (
     <DataContext.Provider
-      value={{
-        issues,
-        notices,
-        messItems,
-        categories,
-        repairers,
-        loading,
-        addIssue,
-        addNotice,
-        updateNotice, 
-        updateIssue,
-        editIssue,
-        addMessItem,
-        updateMessItem,
-        deleteIssue,
-        deleteNotice,
-        deleteMessItem,
-        upvoteIssue,
-        downvoteIssue,
-      }}
-    >
-      {children}
-    </DataContext.Provider>
+  value={{
+    issues,
+    notices,
+    messItems,
+    categories,
+    repairers,
+    loading,
+
+    // medical
+    doctors,
+    addDoctor,
+    updateDoctor,
+    deleteDoctor,
+
+    studentRecords,
+    addStudentRecord,
+    updateStudentRecord,
+    deleteStudentRecord,
+
+    // existing
+    addIssue,
+    addNotice,
+    updateNotice,
+    updateIssue,
+    editIssue,
+    addMessItem,
+    updateMessItem,
+    deleteIssue,
+    deleteNotice,
+    deleteMessItem,
+    upvoteIssue,
+    downvoteIssue,
+  }}
+>
+  {children}
+</DataContext.Provider>
+
   );
 };
 

@@ -19,6 +19,7 @@ import Header from "@/components/ui/Header";
 // ✅ Added imports for bus timetable pages
 import BusTimetableView from "@/components/BusTimetableView";
 import BusTimetableAdmin from "@/components/BusTimetableAdmin";
+import Medical from "./pages/Medical";
 
 const queryClient = new QueryClient();
 
@@ -94,6 +95,15 @@ const App = () => {
                   element={
                     <ProtectedRoute allowedRoles={["admin"]}>
                       <BusTimetableAdmin />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/medical"
+                  element={
+                    <ProtectedRoute allowedRoles={["student", "admin"]}>
+                      <Medical />
                     </ProtectedRoute>
                   }
                 />
