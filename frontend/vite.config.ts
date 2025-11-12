@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
 
     // Directly forward all backend requests to Flask
     // In hostel-harmony-56-main/vite.config.ts
-
+    allowedHosts: ['hostel-hub-management-system.onrender.com'],
     proxy: {
       "/api": {
         target: "https://hostel-hub-management-system-production.up.railway.app",
