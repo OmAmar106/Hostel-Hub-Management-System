@@ -1,3 +1,4 @@
+// src/pages/AdminDashboard.tsx (or wherever you keep it)
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import {
   UserPlus,
   UtensilsCrossed,
   Bandage,
+  BarChart,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -51,11 +53,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkerForm } from "@/components/WorkerForm";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 
-// ADD: dialog, input, label components
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+// dialog, input, label components
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+
+// Analytics component (from the canvas code)
+import AdminAnalytics from "@/components/AdminAnalytics";
 
 const API_BASE = "http://localhost:5000";
 
@@ -64,10 +75,31 @@ const AdminDashboard = () => {
   const [workers, setWorkers] = useState<any[]>([]);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { issues, notices, messItems, addNotice, updateIssue, deleteNotice, addMessItem, updateMessItem, deleteMessItem, updateNotice, doctors, addDoctor, updateDoctor, deleteDoctor, studentRecords, addStudentRecord, updateStudentRecord, deleteStudentRecord } = useData();
+  const {
+    issues,
+    notices,
+    messItems,
+    addNotice,
+    updateIssue,
+    deleteNotice,
+    addMessItem,
+    updateMessItem,
+    deleteMessItem,
+    updateNotice,
+    doctors,
+    addDoctor,
+    updateDoctor,
+    deleteDoctor,
+    studentRecords,
+    addStudentRecord,
+    updateStudentRecord,
+    deleteStudentRecord,
+  } = useData();
 
-
-  const [activeTab, setActiveTab] = useState<"issues" | "notices" | "workers" | "mess"| "medical">("issues");
+  // include "analytics" in the union
+  const [activeTab, setActiveTab] = useState<
+    "issues" | "notices" | "workers" | "mess" | "medical" | "analytics"
+  >("issues");
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [noticeFormOpen, setNoticeFormOpen] = useState(false);
@@ -78,7 +110,12 @@ const AdminDashboard = () => {
   // --- New state for medical add/edit/delete UI ---
   const [addDoctorOpen, setAddDoctorOpen] = useState(false);
   const [editingDoctorId, setEditingDoctorId] = useState<number | null>(null);
-  const [doctorForm, setDoctorForm] = useState<{ name: string; availableToday: boolean; arrivalTime: string; leaveTime: string }>({
+  const [doctorForm, setDoctorForm] = useState<{
+    name: string;
+    availableToday: boolean;
+    arrivalTime: string;
+    leaveTime: string;
+  }>({
     name: "",
     availableToday: false,
     arrivalTime: "",
@@ -87,14 +124,20 @@ const AdminDashboard = () => {
 
   const [addStudentOpen, setAddStudentOpen] = useState(false);
   const [editingStudentId, setEditingStudentId] = useState<number | null>(null);
-  const [studentForm, setStudentForm] = useState<{ studentName: string; email: string; prescribedMedicine: string }>({
+  const [studentForm, setStudentForm] = useState<{
+    studentName: string;
+    email: string;
+    prescribedMedicine: string;
+  }>({
     studentName: "",
     email: "",
     prescribedMedicine: "",
   });
 
   const [medDeleteDialogOpen, setMedDeleteDialogOpen] = useState(false);
-  const [medDeleteTarget, setMedDeleteTarget] = useState<{ type: "doctor" | "student"; id: number | null } | null>(null);
+  const [medDeleteTarget, setMedDeleteTarget] = useState<
+    { type: "doctor" | "student"; id: number | null } | null
+  >(null);
   // --- end medical UI state ---
 
   // 🔹 Logout
@@ -110,7 +153,10 @@ const AdminDashboard = () => {
   };
 
   // 🔹 Update issue status
-  const handleStatusChange = async (issueId: number, newStatus: Issue["status"]) => {
+  const handleStatusChange = async (
+    issueId: number,
+    newStatus: Issue["status"]
+  ) => {
     try {
       const res = await fetch(`${API_BASE}/api/issues/${issueId}/status`, {
         method: "POST",
@@ -136,54 +182,53 @@ const AdminDashboard = () => {
   };
 
   const handleAssignWorker = async (issueId: number, workerId: number) => {
-  try {
-    const token = localStorage.getItem("access_token");
-
-    const res = await fetch(`${API_BASE}/api/issues/${issueId}/assign`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token ? `Bearer ${token}` : "",
-      },
-      body: JSON.stringify({ worker_id: workerId }), // 👈 use correct key
-    });
-
-    console.debug("Assign response status:", res.status);
-    let payload = null;
     try {
-      payload = await res.json();
-      console.debug("Assign response body:", payload);
-    } catch {
-      console.debug("No JSON response from backend");
-    }
+      const token = localStorage.getItem("access_token");
 
-    if (!res.ok) {
-      const serverMsg = payload?.error || payload?.message || `HTTP ${res.status}`;
+      const res = await fetch(`${API_BASE}/api/issues/${issueId}/assign`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({ worker_id: workerId }), // 👈 use correct key
+      });
+
+      console.debug("Assign response status:", res.status);
+      let payload = null;
+      try {
+        payload = await res.json();
+        console.debug("Assign response body:", payload);
+      } catch {
+        console.debug("No JSON response from backend");
+      }
+
+      if (!res.ok) {
+        const serverMsg = payload?.error || payload?.message || `HTTP ${res.status}`;
+        toast({
+          title: "Failed to assign",
+          description: serverMsg,
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
-        title: "Failed to assign",
-        description: serverMsg,
+        title: "Assigned Successfully",
+        description: "Worker assigned to issue.",
+      });
+
+      // Refresh the page or data so UI updates
+      window.location.reload(); // 👈 temporary refresh until we expose fetchAllData
+    } catch (err) {
+      console.error("Error assigning worker:", err);
+      toast({
+        title: "Error",
+        description: "Could not assign worker.",
         variant: "destructive",
       });
-      return;
     }
-
-    toast({
-      title: "Assigned Successfully",
-      description: "Worker assigned to issue.",
-    });
-
-    // Refresh the page or data so UI updates
-    window.location.reload(); // 👈 temporary refresh until we expose fetchAllData
-  } catch (err) {
-    console.error("Error assigning worker:", err);
-    toast({
-      title: "Error",
-      description: "Could not assign worker.",
-      variant: "destructive",
-    });
-  }
-};
-
+  };
 
   const handleEditNotice = (notice: Notice) => {
     setEditingNotice(notice);
@@ -236,7 +281,8 @@ const AdminDashboard = () => {
   }, [activeTab, workerFormOpen]);
 
   // helper for safe string comparison
-  const normalize = (s?: any) => (s === undefined || s === null ? "" : String(s).trim().toLowerCase());
+  const normalize = (s?: any) =>
+    s === undefined || s === null ? "" : String(s).trim().toLowerCase();
 
   // Helper to open doctor edit row and prefill
   const startEditDoctor = (d: any) => {
@@ -255,35 +301,34 @@ const AdminDashboard = () => {
   };
 
   const saveDoctorEdits = async (id: number | null) => {
-  if (!id) return;
-  try {
-    if (!updateDoctor) throw new Error("updateDoctor not available");
-    const ok = await updateDoctor(id, {
-      name: doctorForm.name,
-      availableToday: doctorForm.availableToday,
-      arrivalTime: doctorForm.arrivalTime,
-      leaveTime: doctorForm.leaveTime,
-    });
-    if (ok) {
-      // fetchAllData called inside DataContext; just close editor
-      cancelEditDoctor();
-    } else {
+    if (!id) return;
+    try {
+      if (!updateDoctor) throw new Error("updateDoctor not available");
+      const ok = await updateDoctor(id, {
+        name: doctorForm.name,
+        availableToday: doctorForm.availableToday,
+        arrivalTime: doctorForm.arrivalTime,
+        leaveTime: doctorForm.leaveTime,
+      });
+      if (ok) {
+        // fetchAllData called inside DataContext; just close editor
+        cancelEditDoctor();
+      } else {
+        toast({
+          title: "Failed to update",
+          description: "Could not save doctor. See console for details.",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      console.error(err);
       toast({
-        title: "Failed to update",
-        description: "Could not save doctor. See console for details.",
+        title: "Error",
+        description: err?.message || "Failed to update doctor",
         variant: "destructive",
       });
     }
-  } catch (err: any) {
-    console.error(err);
-    toast({
-      title: "Error",
-      description: err?.message || "Failed to update doctor",
-      variant: "destructive",
-    });
-  }
-};
-
+  };
 
   const submitNewDoctor = async () => {
     try {
@@ -326,29 +371,28 @@ const AdminDashboard = () => {
   };
 
   const saveStudentEdits = async (id: number | null) => {
-  if (!id) return;
-  try {
-    if (!updateStudentRecord) throw new Error("updateStudentRecord not available");
-    const ok = await updateStudentRecord(id, {
-      studentName: studentForm.studentName,
-      email: studentForm.email,
-      prescribedMedicine: studentForm.prescribedMedicine,
-    });
-    if (ok) {
-      cancelEditStudent();
-    } else {
-      toast({
-        title: "Failed to update",
-        description: "Could not update student record. See console for details.",
-        variant: "destructive",
+    if (!id) return;
+    try {
+      if (!updateStudentRecord) throw new Error("updateStudentRecord not available");
+      const ok = await updateStudentRecord(id, {
+        studentName: studentForm.studentName,
+        email: studentForm.email,
+        prescribedMedicine: studentForm.prescribedMedicine,
       });
+      if (ok) {
+        cancelEditStudent();
+      } else {
+        toast({
+          title: "Failed to update",
+          description: "Could not update student record. See console for details.",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Error", description: err?.message || "Failed to update record", variant: "destructive" });
     }
-  } catch (err: any) {
-    console.error(err);
-    toast({ title: "Error", description: err?.message || "Failed to update record", variant: "destructive" });
-  }
-};
-
+  };
 
   const submitNewStudent = async () => {
     try {
@@ -434,7 +478,7 @@ const AdminDashboard = () => {
       <nav className="border-b bg-white dark:bg-gray-800 dark:border-gray-700">
         <div className="container mx-auto px-4">
           <div className="flex gap-2 py-2">
-            {(["issues", "notices", "workers", "mess"] as const).map((tab) => (
+            {(["issues", "notices", "workers", "mess", "analytics"] as const).map((tab) => (
               <Button
                 key={tab}
                 variant={activeTab === tab ? "default" : "ghost"}
@@ -445,13 +489,16 @@ const AdminDashboard = () => {
                 {tab === "notices" && <Megaphone className="h-4 w-4" />}
                 {tab === "workers" && <Wrench className="h-4 w-4" />}
                 {tab === "mess" && <UtensilsCrossed className="h-4 w-4" />}
+                {tab === "analytics" && <BarChart className="h-4 w-4" />}
                 {tab === "issues"
                   ? "All Complaints"
                   : tab === "notices"
-                    ? "Manage Notices"
-                    : tab === "workers"
-                    ? "Manage Workers"
-                    : "Manage Mess"}
+                  ? "Manage Notices"
+                  : tab === "workers"
+                  ? "Manage Workers"
+                  : tab === "mess"
+                  ? "Manage Mess"
+                  : "Analytics"}
               </Button>
             ))}
             <Button
@@ -489,16 +536,13 @@ const AdminDashboard = () => {
                     </TableHeader>
                     <TableBody>
                       {issues
+                        .slice() // avoid mutating original
                         .sort((a, b) => (a.assignee ? 1 : -1))
                         .map((issue) => {
                           // ---------- robust matching & debug logs ----------
-                          // Debug logs — remove these once you confirm fields are correct
-                          // (Open DevTools console to inspect)
                           console.debug("DEBUG issue:", issue);
-                          // show only a small sample to avoid huge logs
                           console.debug("DEBUG workers sample:", workers.slice(0, 8));
 
-                          // collect possible category-like values from the issue object
                           const possibleIssueCategories = new Set<string>(
                             [
                               normalize((issue as any).category),
@@ -513,17 +557,14 @@ const AdminDashboard = () => {
                             ].filter(Boolean)
                           );
 
-                          // If still empty, try looking into description for hints (debug only)
                           if (possibleIssueCategories.size === 0) {
                             const desc = normalize((issue as any).description || "");
                             if (desc) {
-                              // take first few words as a candidate — debug only
                               const firstWords = desc.split(" ").slice(0, 3).join(" ");
                               possibleIssueCategories.add(firstWords);
                             }
                           }
 
-                          // build candidates by flexible matching
                           const candidates = workers.filter((w) => {
                             const workerType = normalize(
                               (w as any).worker_type ||
@@ -536,13 +577,9 @@ const AdminDashboard = () => {
 
                             for (const ic of possibleIssueCategories) {
                               if (!ic) continue;
-                              // exact match
                               if (workerType && workerType === ic) return true;
-                              // partial contains
                               if (workerType && (ic.includes(workerType) || workerType.includes(ic))) return true;
-                              // id match fallback
                               if (workerIdStr && workerIdStr === ic) return true;
-                              // name in category (rare)
                               if (workerName && ic.includes(workerName)) return true;
                             }
                             return false;
@@ -576,8 +613,8 @@ const AdminDashboard = () => {
                                       issue.status === "Resolved"
                                         ? "text-green-600 font-medium"
                                         : issue.status === "In Progress"
-                                          ? "text-blue-600 font-medium"
-                                          : "text-red-600 font-medium"
+                                        ? "text-blue-600 font-medium"
+                                        : "text-red-600 font-medium"
                                     }
                                   >
                                     {issue.status}
@@ -600,7 +637,6 @@ const AdminDashboard = () => {
                                       size="sm"
                                       className="text-blue-600 hover:text-blue-800"
                                       onClick={async () => {
-                                        // Confirm before unassigning
                                         if (!confirm("Unassign this worker?")) return;
 
                                         try {
@@ -757,12 +793,13 @@ const AdminDashboard = () => {
         )}
 
         {activeTab === "mess" && (
-          <MessForm 
+          <MessForm
             messItems={messItems}
             onAdd={addMessItem}
             onUpdate={updateMessItem}
           />
         )}
+
         {activeTab === "medical" && (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
@@ -995,6 +1032,20 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* NEW: Analytics tab */}
+        {activeTab === "analytics" && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+              Analytics
+            </h2>
+            <Card className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+              <CardContent>
+                <AdminAnalytics />
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
       </main>
 
       <IssueModal
@@ -1009,7 +1060,7 @@ const AdminDashboard = () => {
         addNotice={addNotice}
         updateNotice={updateNotice}
         editingNotice={editingNotice}
-        />
+      />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
