@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter as HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { DataProvider } from "./contexts/DataContext";
 import Landing from "./pages/Landing";
@@ -65,7 +65,7 @@ const DashboardRouter = () => {
 
 const App = () => {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <DataProvider>
@@ -114,7 +114,7 @@ const App = () => {
           </DataProvider>
         </AuthProvider>
       </QueryClientProvider>
-    </BrowserRouter>
+    </HashRouter>
   );
 };
 
